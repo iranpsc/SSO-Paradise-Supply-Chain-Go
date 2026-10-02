@@ -19,3 +19,15 @@ go.work.sum
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Runtime data and frontend build output
+# Unanchored so nested runtimes (e.g. web/var/app.key) are excluded too.
+var/
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+playwright-report/
+test-results/
+/deploy/secrets/
+/deploy/production.env

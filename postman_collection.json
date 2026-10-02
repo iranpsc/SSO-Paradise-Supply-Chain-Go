@@ -1,0 +1,1170 @@
+{
+  "info": {
+    "name": "SSO Paradise Supply Chain API",
+    "description": "API collection for SSO Paradise Supply Chain Go application.\n\n**Auth:** Send `Authorization: Bearer <token>` header or use the `paradise_session` cookie.\n\n**Base URL:** `http://127.0.0.1:8080`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8080"
+    },
+    {
+      "key": "origin",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.request.method !== 'GET' && pm.request.method !== 'HEAD') {",
+          "    pm.request.headers.upsert({key: 'Origin', value: pm.collectionVariables.get('origin') || 'http://localhost:3000'});",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/healthz",
+              "host": ["{{baseUrl}}"],
+              "path": ["healthz"]
+            }
+          },
+          "response": [
+            {
+              "name": "Health Check",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/healthz",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["healthz"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+                { "key": "Cache-Control", "value": "no-store" }
+              ],
+              "body": "{\n  \"status\": \"ok\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"johndoe\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "register"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (201)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"johndoe\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "register"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+                { "key": "Set-Cookie", "value": "paradise_session=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
+            },
+            {
+              "name": "Validation Error (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"ab\",\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\",\n  \"password_confirmation\": \"mismatch\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "register"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"name\": [\"نام معتبر وارد کنید؛ پیشوند hm- مجاز نیست.\"],\n    \"email\": [\"ایمیل معتبر وارد کنید.\"],\n    \"username\": [\"نام کاربری باید ۳ تا ۳۰ نویسه، با حرف انگلیسی آغاز و فقط شامل حروف انگلیسی، عدد و زیرخط باشد.\"],\n    \"password\": [\"رمز باید ۸ تا ۴۰ نویسه و شامل حروف بزرگ و کوچک، عدد و نماد باشد.\"],\n    \"password_confirmation\": [\"تکرار رمز مطابقت ندارد.\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"SecurePass1!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "login"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"SecurePass1!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+                { "key": "Set-Cookie", "value": "paradise_session=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400" }
+              ],
+              "body": "{\n  \"message\": \"Login successful\",\n  \"token\": \"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\"\n}"
+            },
+            {
+              "name": "Invalid Credentials (401)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"WrongPass!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "login"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"Invalid credentials\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logout"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/logout",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "logout"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" },
+                { "key": "Set-Cookie", "value": "paradise_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax" }
+              ],
+              "body": "{\n  \"message\": \"Logged out successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/password/email",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "password", "email"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/password/email",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "password", "email"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"اگر حسابی با این ایمیل وجود داشته باشد، پیوند بازیابی ارسال می‌شود.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/password/reset",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "password", "reset"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/password/reset",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "password", "reset"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"رمز تغییر کرد؛ دوباره وارد شوید.\"\n}"
+            },
+            {
+              "name": "Invalid Token (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"token\": \"invalid-token\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/password/reset",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "password", "reset"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"پیوند نامعتبر یا منقضی شده است.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "item": [
+        {
+          "name": "Get Account",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/account",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "account"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/account",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/user",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"id\": 1,\n  \"name\": \"John Doe\",\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"code\": null,\n  \"referral\": \"\",\n  \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Me (Public Profile)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/me",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "me"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"code\": null,\n    \"avatar\": \"\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Updated\",\n  \"email\": \"john.new@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/account",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "account"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Updated\",\n  \"email\": \"john.new@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/account",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Updated\",\n    \"username\": \"johndoe\",\n    \"email\": \"john.new@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
+            },
+            {
+              "name": "Unverified (403)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Updated\",\n  \"email\": \"john.new@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/account",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account"]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"ابتدا ایمیل خود را تأیید کنید.\",\n  \"code\": \"email_unverified\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"SecurePass1!\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "change-password"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"current_password\": \"SecurePass1!\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/change-password",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "change-password"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"رمز عبور به‌روزرسانی شد.\"\n}"
+            },
+            {
+              "name": "Wrong Current Password (422)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"current_password\": \"WrongPass!\",\n  \"password\": \"NewSecurePass1!\",\n  \"password_confirmation\": \"NewSecurePass1!\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/change-password",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "change-password"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"current_password\": [\"رمز فعلی صحیح نیست.\"]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Email Verification",
+      "item": [
+        {
+          "name": "Resend Verification",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/email/verification-notification",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "email", "verification-notification"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/email/verification-notification",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "email", "verification-notification"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"پیوند تأیید ارسال شد.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"verification-token-from-email\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/email/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "email", "verify"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"verification-token-from-email\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/email/verify",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "email", "verify"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"ایمیل تأیید شد.\"\n}"
+            },
+            {
+              "name": "Invalid Token (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"invalid-token\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/email/verify",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "email", "verify"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"پیوند نامعتبر یا منقضی شده است.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Personal Info",
+      "item": [
+        {
+          "name": "Get Personal Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personal-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "personal-info"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"user_id\": 1,\n    \"is_company\": false,\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"mobile\": \"09123456789\",\n    \"telephone\": \"02112345678\",\n    \"national_code\": \"1234567890\",\n    \"address\": \"Tehran, Main St\",\n    \"company_name\": \"\",\n    \"company_address\": \"\",\n    \"company_registration_number\": \"\",\n    \"company_national_number\": \"\",\n    \"company_tax_number\": \"\",\n    \"company_executive_name\": \"\",\n    \"is_verified\": false,\n    \"verification_messages\": \"\"\n  },\n  \"documents\": {\n    \"melli_card_scan\": true,\n    \"certificate_scan\": false,\n    \"bank_card_scan\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Personal Info (JSON)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_company\": false,\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"mobile\": \"09123456789\",\n  \"telephone\": \"02112345678\",\n  \"national_code\": \"1234567890\",\n  \"address\": \"Tehran, Main St\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/personal-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "personal-info"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"is_company\": false,\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"mobile\": \"09123456789\",\n  \"telephone\": \"02112345678\",\n  \"national_code\": \"1234567890\",\n  \"address\": \"Tehran, Main St\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"user_id\": 1,\n    \"is_company\": false,\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"mobile\": \"09123456789\",\n    \"telephone\": \"02112345678\",\n    \"national_code\": \"1234567890\",\n    \"address\": \"Tehran, Main St\",\n    \"company_name\": \"\",\n    \"company_address\": \"\",\n    \"company_registration_number\": \"\",\n    \"company_national_number\": \"\",\n    \"company_tax_number\": \"\",\n    \"company_executive_name\": \"\",\n    \"is_verified\": false,\n    \"verification_messages\": \"\"\n  },\n  \"documents\": {\n    \"melli_card_scan\": false,\n    \"certificate_scan\": false,\n    \"bank_card_scan\": false\n  },\n  \"message\": \"اطلاعات با موفقیت ثبت شد.\"\n}"
+            },
+            {
+              "name": "Validation Error (422)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"is_company\": false,\n  \"first_name\": \"\",\n  \"last_name\": \"\",\n  \"mobile\": \"123\",\n  \"telephone\": \"021\",\n  \"national_code\": \"abc\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"first_name\": [\"این فیلد الزامی است و حداکثر ۲۵۵ نویسه دارد.\"],\n    \"last_name\": [\"این فیلد الزامی است و حداکثر ۲۵۵ نویسه دارد.\"],\n    \"mobile\": [\"شماره موبایل معتبر وارد کنید.\"],\n    \"telephone\": [\"شماره تلفن همراه با کد شهر وارد کنید.\"],\n    \"national_code\": [\"کد ملی معتبر وارد کنید.\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Personal Info (Multipart with Documents)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "is_company", "value": "false", "type": "text" },
+                { "key": "first_name", "value": "John", "type": "text" },
+                { "key": "last_name", "value": "Doe", "type": "text" },
+                { "key": "mobile", "value": "09123456789", "type": "text" },
+                { "key": "telephone", "value": "02112345678", "type": "text" },
+                { "key": "national_code", "value": "1234567890", "type": "text" },
+                { "key": "address", "value": "Tehran, Main St", "type": "text" },
+                { "key": "melli_card_scan", "type": "file", "src": [] },
+                { "key": "certificate_scan", "type": "file", "src": [] },
+                { "key": "bank_card_scan", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/personal-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "personal-info"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "is_company", "value": "false", "type": "text" },
+                    { "key": "first_name", "value": "John", "type": "text" },
+                    { "key": "last_name", "value": "Doe", "type": "text" },
+                    { "key": "mobile", "value": "09123456789", "type": "text" },
+                    { "key": "telephone", "value": "02112345678", "type": "text" },
+                    { "key": "national_code", "value": "1234567890", "type": "text" },
+                    { "key": "address", "value": "Tehran, Main St", "type": "text" }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"user_id\": 1,\n    \"is_company\": false,\n    \"first_name\": \"John\",\n    \"last_name\": \"Doe\",\n    \"mobile\": \"09123456789\",\n    \"telephone\": \"02112345678\",\n    \"national_code\": \"1234567890\",\n    \"address\": \"Tehran, Main St\",\n    \"company_name\": \"\",\n    \"company_address\": \"\",\n    \"company_registration_number\": \"\",\n    \"company_national_number\": \"\",\n    \"company_tax_number\": \"\",\n    \"company_executive_name\": \"\",\n    \"is_verified\": false,\n    \"verification_messages\": \"\"\n  },\n  \"documents\": {\n    \"melli_card_scan\": true,\n    \"certificate_scan\": true,\n    \"bank_card_scan\": true\n  },\n  \"message\": \"اطلاعات با موفقیت ثبت شد.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Document",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/personal-info/documents/melli_card_scan",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "personal-info", "documents", "melli_card_scan"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200) - Image",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info/documents/melli_card_scan",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info", "documents", "melli_card_scan"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "image/jpeg" },
+                { "key": "Content-Length", "value": "12345" },
+                { "key": "Cache-Control", "value": "private, no-store" }
+              ],
+              "body": "{\n  \"mode\": \"file\",\n  \"file\": {\n    \"src\": \"/path/to/sample.jpg\"\n  }\n}"
+            },
+            {
+              "name": "Not Found (404)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/personal-info/documents/invalid_kind",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "personal-info", "documents", "invalid_kind"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"یافت نشد.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Avatar",
+      "item": [
+        {
+          "name": "Get Own Avatar",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/account/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "account", "avatar"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200) - Image",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/account/avatar",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account", "avatar"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "image/jpeg" },
+                { "key": "Content-Length", "value": "54321" },
+                { "key": "Cache-Control", "value": "private, no-store" }
+              ],
+              "body": "{\n  \"mode\": \"file\",\n  \"file\": {\n    \"src\": \"/path/to/avatar.jpg\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Avatar",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "avatar", "type": "file", "src": [] }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/account/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "account", "avatar"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "avatar", "type": "file", "src": [] }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/account/avatar",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account", "avatar"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"آواتار به‌روزرسانی شد.\"\n}"
+            },
+            {
+              "name": "Missing File (422)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  { "key": "Authorization", "value": "Bearer {{token}}" }
+                ],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": []
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/account/avatar",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account", "avatar"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"avatar\": [\"فایل آواتار الزامی است.\"]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Get Public User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "1"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "1"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"code\": null,\n    \"avatar\": \"\"\n  }\n}"
+            },
+            {
+              "name": "Not Found (404)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/99999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "99999"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [
+                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+              ],
+              "body": "{\n  \"message\": \"یافت نشد.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Public Avatar",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/1/avatar",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "1", "avatar"]
+            }
+          },
+          "response": [
+            {
+              "name": "Success (200) - Image",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/users/1/avatar",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "users", "1", "avatar"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [
+                { "key": "Content-Type", "value": "image/jpeg" },
+                { "key": "Content-Length", "value": "54321" },
+                { "key": "Cache-Control", "value": "public, max-age=3600" }
+              ],
+              "body": "{\n  \"mode\": \"file\",\n  \"file\": {\n    \"src\": \"/path/to/avatar.jpg\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

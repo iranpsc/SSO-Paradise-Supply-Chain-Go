@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS profile_details (
+ user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS media (
+ user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL,
+ content_type TEXT NOT NULL,
+ data BLOB NOT NULL,
+ PRIMARY KEY(user_id,kind)
+);
+CREATE TABLE IF NOT EXISTS wallets (
+ user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ address TEXT NOT NULL UNIQUE COLLATE NOCASE
+);
+CREATE TABLE IF NOT EXISTS challenges (
+ key TEXT PRIMARY KEY,
+ message TEXT NOT NULL,
+ expires_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS session_attributes (
+ token_hash TEXT NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,
+ name TEXT NOT NULL,
+ value TEXT NOT NULL,
+ expires_at TEXT NOT NULL,
+ PRIMARY KEY(token_hash,name)
+);
+CREATE TABLE IF NOT EXISTS registration_callbacks (
+ user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ url TEXT NOT NULL,
+ expires_at TEXT NOT NULL
+);
