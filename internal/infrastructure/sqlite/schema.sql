@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS users (
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ name TEXT NOT NULL,
+ email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+ password_hash TEXT NOT NULL,
+ code TEXT UNIQUE,
+ referral TEXT NOT NULL DEFAULT '',
+ email_verified_at TEXT,
+ created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS personal_infos (
+ user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+ is_verified INTEGER NOT NULL DEFAULT 0,
+ first_name TEXT NOT NULL DEFAULT '',
+ last_name TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS sessions (
+ token_hash TEXT PRIMARY KEY,
+ user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ expires_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS actions (
+ user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL CHECK(kind IN ('verify','reset')),
+ token_hash TEXT NOT NULL,
+ email TEXT NOT NULL,
+ expires_at TEXT NOT NULL,
+ PRIMARY KEY(user_id, kind)
+);
+CREATE TABLE IF NOT EXISTS code_sequence (id INTEGER PRIMARY KEY CHECK(id=1), value INTEGER NOT NULL);
+INSERT OR IGNORE INTO code_sequence(id,value) VALUES(1,2000000);

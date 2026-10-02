@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  username VARCHAR(255) NULL UNIQUE,
+  email VARCHAR(255) NULL UNIQUE,
+  password_hash VARCHAR(255) NULL,
+  code VARCHAR(255) UNIQUE,
+  referral VARCHAR(255) NOT NULL DEFAULT '',
+  email_verified_at VARCHAR(50),
+  created_at VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS personal_infos (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  is_verified TINYINT NOT NULL DEFAULT 0,
+  first_name VARCHAR(255) NOT NULL DEFAULT '',
+  last_name VARCHAR(255) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS sessions (
+  token_hash VARCHAR(255) PRIMARY KEY,
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at VARCHAR(50) NOT NULL,
+  KEY sessions_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS actions (
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind VARCHAR(20) NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  expires_at VARCHAR(50) NOT NULL,
+  PRIMARY KEY(user_id, kind),
+  CONSTRAINT chk_kind CHECK(kind IN ('verify','reset'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS code_sequence (id INT PRIMARY KEY, value INT NOT NULL, CONSTRAINT chk_id CHECK(id=1)) ENGINE=InnoDB;
+INSERT IGNORE INTO code_sequence(id,value) VALUES(1,2000000);
