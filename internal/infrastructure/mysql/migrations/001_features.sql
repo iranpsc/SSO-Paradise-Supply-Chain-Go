@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS profile_details (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  payload TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS media (
+  user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind VARCHAR(50) NOT NULL,
+  content_type VARCHAR(100) NOT NULL,
+  data BLOB NOT NULL,
+  PRIMARY KEY(user_id,kind)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS wallets (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  address VARCHAR(255) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS challenges (
+  `key` VARCHAR(255) PRIMARY KEY,
+  message TEXT NOT NULL,
+  expires_at VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS session_attributes (
+  token_hash VARCHAR(255) NOT NULL REFERENCES sessions(token_hash) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  value TEXT NOT NULL,
+  expires_at VARCHAR(50) NOT NULL,
+  PRIMARY KEY(token_hash,name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE IF NOT EXISTS registration_callbacks (
+  user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  url VARCHAR(500) NOT NULL,
+  expires_at VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

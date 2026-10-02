@@ -1,0 +1,77 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-paradise_go}
+      MYSQL_USER: ${MYSQL_USER:-sso}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [CMD-SHELL, 'mysqladmin ping -h 127.0.0.1 --silent']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+  api:
+    stop_grace_period: 45s
+    build: .
+    restart: unless-stopped
+    env_file: deploy/production.env
+    environment:
+      HTTP_ADDR: 0.0.0.0:8080
+      MYSQL_HOST: mysql
+      REDIS_ADDR: redis:6379
+      OAUTH_PRIVATE_KEY_PATH: /run/sso-secrets/oauth-private.key
+    volumes:
+      - ./deploy/secrets:/run/sso-secrets:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/readyz']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+  worker:
+    stop_grace_period: 45s
+    build: .
+    command: worker
+    restart: unless-stopped
+    env_file: deploy/production.env
+    environment:
+      MYSQL_HOST: mysql
+      REDIS_ADDR: redis:6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        API_ORIGIN: http://api:8080
+        NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:?Set WalletConnect project ID}
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:3000:3000
+    depends_on:
+      api:
+        condition: service_healthy
+volumes:
+  mysql_data:
+  redis_data:
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.42.0/24
