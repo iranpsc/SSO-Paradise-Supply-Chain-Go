@@ -83,7 +83,8 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	sessionID := strings.Repeat("s", 40)
 	guardKey := "login_web_" + security.SessionGuardHash()
 	sessionMAC := security.LaravelPasswordMAC(hash, sourceKey)
-	serialized := fmt.Sprintf(`a:3:{s:%d:"%s";i:7;s:17:"password_hash_web";s:%d:"%s";s:12:"wallet_login";b:1;}`, len(guardKey), guardKey, len(sessionMAC), sessionMAC)
+	csrfToken := strings.Repeat("t", 40)
+	serialized := fmt.Sprintf(`a:4:{s:%d:"%s";i:7;s:17:"password_hash_web";s:%d:"%s";s:12:"wallet_login";b:1;s:6:"_token";s:40:"%s";}`, len(guardKey), guardKey, len(sessionMAC), sessionMAC, csrfToken)
 	if err = os.WriteFile(filepath.Join(sessionsRoot, sessionID), []byte(serialized), 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -140,6 +141,12 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	if _, err = target.Media(ctx, 7, "avatars"); err != nil {
 		t.Fatal(err)
 	}
+	if public, err := target.PublicProfile(ctx, 7); err != nil || public.Avatar != "/storage/2/avatar.png" || public.AvatarAbsolute {
+		t.Fatal("legacy avatar URL changed", public, err)
+	}
+	if avatar, err := target.LegacyPublicMedia(ctx, "/storage/2/avatar.png"); err != nil || len(avatar.Data) == 0 {
+		t.Fatal("legacy avatar URL no longer resolves", err)
+	}
 	if _, err = target.ImportLaravelWithOptions(ctx, source, root, true, options); err == nil {
 		t.Fatal("non-empty target accepted")
 	}
@@ -153,6 +160,9 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	}
 	if flag, e := target.SessionAttribute(ctx, application.Digest(newSession), "wallet_login", time.Now()); e != nil || flag != "true" {
 		t.Fatal("wallet callback flag lost")
+	}
+	if value, err := target.SessionAttribute(ctx, application.Digest(newSession), "csrf_token", time.Now()); err != nil || value != csrfToken {
+		t.Fatal("imported CSRF token lost", err)
 	}
 	if _, e := target.SessionAttribute(ctx, application.Digest(sessionID), "wallet_login", time.Now()); e != domain.ErrNotFound {
 		t.Fatal("old wallet flag replayable")

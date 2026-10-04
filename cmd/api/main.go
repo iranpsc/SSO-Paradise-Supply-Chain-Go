@@ -92,15 +92,15 @@ func run() error {
 		auth.LegacyRememberCookie = "remember_web_" + security.SessionGuardHash()
 	}
 
-	auth.OAuth.AccessTTL, e = durationEnv("OAUTH_ACCESS_TTL", 0)
+	auth.OAuth.AccessTTL, e = durationEnv("OAUTH_ACCESS_TTL", time.Hour)
 	if e != nil {
 		return e
 	}
-	auth.OAuth.RefreshTTL, e = durationEnv("OAUTH_REFRESH_TTL", 0)
+	auth.OAuth.RefreshTTL, e = durationEnv("OAUTH_REFRESH_TTL", 2*time.Hour)
 	if e != nil {
 		return e
 	}
-	auth.OAuth.PersonalTTL, e = durationEnv("OAUTH_PERSONAL_TTL", 0)
+	auth.OAuth.PersonalTTL, e = durationEnv("OAUTH_PERSONAL_TTL", time.Hour)
 	if e != nil {
 		return e
 	}

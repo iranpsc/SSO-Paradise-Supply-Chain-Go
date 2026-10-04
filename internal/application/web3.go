@@ -130,6 +130,12 @@ func validateSignature(signature string) error {
 // LoginNonce issues a login challenge for address, overwriting any previous
 // one. No user row is created, mirroring getLoginNonce.
 func (w *Web3) LoginNonce(ctx context.Context, address string) (string, error) {
+	return w.loginNonce(ctx, address, false)
+}
+func (w *Web3) LaravelLoginNonce(ctx context.Context, address string) (string, error) {
+	return w.loginNonce(ctx, address, true)
+}
+func (w *Web3) loginNonce(ctx context.Context, address string, legacy bool) (string, error) {
 	address, err := validateAddress(address)
 	if err != nil {
 		return "", err
@@ -139,6 +145,9 @@ func (w *Web3) LoginNonce(ctx context.Context, address string) (string, error) {
 		return "", err
 	}
 	message := w.loginMessage(address, nonce)
+	if legacy {
+		message = "Sign in to " + w.AppName + " at " + w.messageDomain() + ".\n\nWallet: " + address + "\nNonce: " + nonce
+	}
 	if err := w.Challenges.SaveChallenge(ctx, loginNonceKey(address), message, w.Now().Add(NonceTTL)); err != nil {
 		return "", err
 	}
@@ -149,6 +158,12 @@ func (w *Web3) LoginNonce(ctx context.Context, address string) (string, error) {
 // It mirrors getLinkNonce's pre-checks; AttachWallet re-checks them inside
 // its transaction.
 func (w *Web3) LinkNonce(ctx context.Context, user domain.User, address string) (string, error) {
+	return w.linkNonce(ctx, user, address, false)
+}
+func (w *Web3) LaravelLinkNonce(ctx context.Context, user domain.User, address string) (string, error) {
+	return w.linkNonce(ctx, user, address, true)
+}
+func (w *Web3) linkNonce(ctx context.Context, user domain.User, address string, legacy bool) (string, error) {
 	address, err := validateAddress(address)
 	if err != nil {
 		return "", err
@@ -172,6 +187,9 @@ func (w *Web3) LinkNonce(ctx context.Context, user domain.User, address string) 
 		return "", err
 	}
 	message := w.linkMessage(user.ID, address, nonce)
+	if legacy {
+		message = "Link wallet to your " + w.AppName + " account at " + w.messageDomain() + ".\n\nAccount ID: " + itoa(user.ID) + "\nWallet: " + address + "\nNonce: " + nonce
+	}
 	if err := w.Challenges.SaveChallenge(ctx, linkNonceKey(user.ID, address), message, w.Now().Add(NonceTTL)); err != nil {
 		return "", err
 	}

@@ -18,6 +18,7 @@ type ImportOptions struct {
 	AppKey          []byte
 }
 type importedSession struct {
+	CSRF      string
 	Hash      string
 	User      int64
 	Expiry    time.Time
@@ -104,6 +105,10 @@ func readLaravelFileSessions(ctx context.Context, options ImportOptions, users [
 		session := importedSession{Hash: securityHash(entry.Name()), User: owner, Expiry: expiry}
 		session.Wallet, _ = data["wallet_login"].(bool)
 		session.Confirmed, _ = data["auth.password_confirmed_at"].(int64)
+		session.CSRF, _ = data["_token"].(string)
+		if len(session.CSRF) > 128 {
+			return nil, skipped, fmt.Errorf("invalid source CSRF token length")
+		}
 		result = append(result, session)
 	}
 	return result, skipped, nil

@@ -12,8 +12,20 @@ import (
 func (s *Server) verifySignedEmail(w http.ResponseWriter, r *http.Request, u domain.User) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	expected := security.EmailFingerprint(u.Email)
-	if err != nil || id != u.ID || subtle.ConstantTimeCompare([]byte(expected), []byte(r.PathValue("hash"))) != 1 || !security.ValidLaravelSignature(s.origin, r.URL.EscapedPath(), r.URL.RawQuery, s.auth.Now(), s.auth.SigningKey) {
-		respond(w, 403, map[string]string{"message": "امضای پیوند معتبر نیست یا پیوند منقضی شده است."})
+	if !security.ValidLaravelSignature(s.origin, r.URL.EscapedPath(), r.URL.RawQuery, s.auth.Now(), s.auth.SigningKey) {
+		respond(w, 403, map[string]string{"message": "Invalid signature."})
+		return
+	}
+	if err != nil || id != u.ID || subtle.ConstantTimeCompare([]byte(expected), []byte(r.PathValue("hash"))) != 1 {
+		respond(w, 403, map[string]string{"message": "This action is unauthorized."})
+		return
+	}
+	if u.EmailVerifiedAt != nil {
+		if expectsJSON(r) {
+			w.WriteHeader(204)
+		} else {
+			http.Redirect(w, r, s.origin+"/home", 302)
+		}
 		return
 	}
 	actions, ok := s.auth.Actions.(application.SignedEmailActions)

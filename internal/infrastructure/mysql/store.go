@@ -374,6 +374,9 @@ func (s *Store) SaveAvatar(ctx context.Context, m domain.Media) error {
 	if err = saveMedia(ctx, tx, m); err != nil {
 		return err
 	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM media_public_paths WHERE user_id=?`, m.UserID); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -395,6 +398,13 @@ func (s *Store) PublicProfile(ctx context.Context, id int64) (domain.PublicProfi
 	}
 	if avatar {
 		p.Avatar = fmt.Sprintf("/api/users/%d/avatar", id)
+		var legacy string
+		lookupErr := s.db.QueryRowContext(ctx, `SELECT path,absolute_url FROM media_public_paths WHERE user_id=?`, id).Scan(&legacy, &p.AvatarAbsolute)
+		if lookupErr == nil {
+			p.Avatar = legacy
+		} else if !errors.Is(lookupErr, sql.ErrNoRows) {
+			return p, lookupErr
+		}
 	}
 	return p, err
 }

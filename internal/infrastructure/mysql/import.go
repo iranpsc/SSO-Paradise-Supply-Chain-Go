@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -305,7 +307,12 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 			rows.Close()
 			return report, fmt.Errorf("media %d: %s", id, reason)
 		}
-		media = append(media, domain.Media{UserID: userID, Kind: kind, ContentType: http.DetectContentType(data), Data: data})
+		item := domain.Media{UserID: userID, Kind: kind, ContentType: http.DetectContentType(data), Data: data}
+		if kind == "avatars" {
+			item.LegacyPath = "/storage/" + strconv.FormatInt(id, 10) + "/" + url.PathEscape(filename)
+			item.LegacyAbsolute = disk == "public"
+		}
+		media = append(media, item)
 	}
 	err = rows.Err()
 	rows.Close()
@@ -423,6 +430,11 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 				return report, err
 			}
 		}
+		if session.CSRF != "" {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO session_attributes(token_hash,name,value,expires_at) VALUES(?,'csrf_token',?,?)`, session.Hash, session.CSRF, stamp(session.Expiry)); err != nil {
+				return report, err
+			}
+		}
 		if session.Confirmed > 0 {
 			expiry := time.Unix(session.Confirmed, 0).Add(3 * time.Hour)
 			if expiry.After(session.Expiry) {
@@ -449,7 +461,17 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 		if c.id == personalID {
 			purpose = "personal_access"
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO oauth_clients(id,name,secret_hash,purpose,revoked,created_at) VALUES(?,?,NULLIF(?,''),?,?,?)`, c.id, c.name, c.secret, purpose, c.revoked, c.created); err != nil {
+		types := []string{}
+		if c.personal && c.secret != "" {
+			types = append(types, "personal_access")
+		}
+		if c.password {
+			types = append(types, "password", "refresh_token")
+		} else if len(c.redirects) > 0 && !c.personal {
+			types = append(types, "authorization_code", "refresh_token")
+		}
+		encodedTypes, _ := json.Marshal(types)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO oauth_clients(id,name,secret_hash,purpose,revoked,created_at,grant_types) VALUES(?,?,NULLIF(?,''),?,?,?,?)`, c.id, c.name, c.secret, purpose, c.revoked, c.created, encodedTypes); err != nil {
 			return report, err
 		}
 		for _, uri := range c.redirects {
@@ -469,6 +491,11 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	for _, m := range media {
 		if err = saveMedia(ctx, tx, m); err != nil {
 			return report, err
+		}
+		if m.LegacyPath != "" {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO media_public_paths(user_id,path,absolute_url) VALUES(?,?,?)`, m.UserID, m.LegacyPath, m.LegacyAbsolute); err != nil {
+				return report, err
+			}
 		}
 	}
 	if err = tx.Commit(); err != nil {

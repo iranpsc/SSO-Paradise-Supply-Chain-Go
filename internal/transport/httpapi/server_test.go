@@ -76,10 +76,10 @@ func TestCookieSessionCSRFAndProtectedRoutes(t *testing.T) {
 		t.Fatal("revoked cookie allowed")
 	}
 }
-func TestRejectsMalformedJSONMassAssignmentAndThrottles(t *testing.T) {
+func TestLaravelLoginInvalidInputAndThrottles(t *testing.T) {
 	h := server(t)
 	for _, body := range []string{`{"email":"x","admin":true}`, `{} {}`, `{`} {
-		if w := request(h, "POST", "/api/login", body, "", nil); w.Code != 400 {
+		if w := request(h, "POST", "/api/login", body, "", nil); w.Code != 422 {
 			t.Fatal("invalid body accepted", w.Code)
 		}
 	}

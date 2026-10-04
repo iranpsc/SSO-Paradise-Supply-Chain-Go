@@ -44,7 +44,7 @@ func (s *Store) RestoreLegacySession(ctx context.Context, in application.LegacyS
 		return u, err
 	}
 	if in.SourceHash != "" {
-		rows, e := tx.QueryContext(ctx, `SELECT name,value,expires_at FROM session_attributes WHERE token_hash=? AND name IN ('wallet_login','password_confirmed_at') AND expires_at>? FOR UPDATE`, in.SourceHash, stamp(in.Now))
+		rows, e := tx.QueryContext(ctx, `SELECT name,value,expires_at FROM session_attributes WHERE token_hash=? AND name IN ('wallet_login','password_confirmed_at','csrf_token') AND expires_at>? FOR UPDATE`, in.SourceHash, stamp(in.Now))
 		if e != nil {
 			return u, e
 		}

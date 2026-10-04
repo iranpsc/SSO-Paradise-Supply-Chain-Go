@@ -11,15 +11,23 @@ import (
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/domain"
 )
 
-func (s *Server) oauthError(w http.ResponseWriter, err error) {
+func (s *Server) oauthError(w http.ResponseWriter, err error, requests ...*http.Request) {
+	var request *http.Request
+	if len(requests) > 0 {
+		request = requests[0]
+	}
+	var detailed passportError
+	if errors.As(err, &detailed) {
+		passportRespond(w, request, detailed.kind, detailed.parameter)
+		return
+	}
 	var oauthErr application.OAuthError
 	if errors.As(err, &oauthErr) {
-		status := 400
-		if oauthErr == application.OAuthInvalidClient {
-			status = 401
-			w.Header().Set("WWW-Authenticate", `Basic realm="oauth"`)
+		parameter := ""
+		if request != nil && oauthErr == application.OAuthInvalidScope {
+			parameter = request.FormValue("scope")
 		}
-		respond(w, status, map[string]string{"error": string(oauthErr), "error_description": oauthErr.PersianMessage(), "message": oauthErr.PersianMessage()})
+		passportRespond(w, request, oauthErr, parameter)
 		return
 	}
 	s.fail(w, err)
@@ -35,16 +43,42 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := parseAuthorization(r.URL.Query())
+	in.Laravel = r.URL.Path == "/oauth/authorize"
+	if in.Laravel {
+		if in.ResponseType == "" {
+			s.oauthError(w, passportError{application.OAuthInvalidRequest, "response_type"}, r)
+			return
+		}
+		if in.ResponseType != "code" {
+			s.oauthError(w, application.OAuthError("unsupported_grant_type"), r)
+			return
+		}
+		if in.ClientID == 0 && r.URL.Query().Get("client_id") == "" {
+			s.oauthError(w, passportError{application.OAuthInvalidRequest, "client_id"}, r)
+			return
+		}
+	}
 	client, scopes, err := s.auth.OAuth.ValidateAuthorization(r.Context(), in)
 	if err != nil {
-		s.oauthError(w, err)
+		if in.Laravel && errors.Is(err, application.OAuthInvalidRequest) {
+			parameter := "redirect_uri"
+			if in.Challenge != "" {
+				parameter = "code_challenge_method"
+			} else if in.Method != "" || client.SecretHash == "" {
+				parameter = "code_challenge"
+			}
+			s.oauthError(w, passportError{application.OAuthInvalidRequest, parameter}, r)
+			return
+		}
+		s.oauthError(w, err, r)
 		return
 	}
 	// OAuth authorization accepts first-party sessions only, never an access token.
 	u, err := s.authenticate(r, w)
 	if err != nil {
 		if r.URL.Path == "/oauth/authorize" {
-			http.Redirect(w, r, s.origin+"/login?"+url.Values{"return_to": {r.URL.RequestURI()}}.Encode(), http.StatusFound)
+			s.flashErrors(w, mustJSON(map[string]string{"intended": r.URL.RequestURI()}))
+			http.Redirect(w, r, s.origin+"/login", http.StatusFound)
 		} else {
 			s.fail(w, err)
 		}
@@ -54,7 +88,7 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 		in.Approve = true
 		target, err := s.auth.OAuth.Authorize(r.Context(), u, in, false)
 		if err != nil {
-			s.oauthError(w, err)
+			s.oauthError(w, err, r)
 			return
 		}
 		target, err = s.walletCallback(r, target)
@@ -72,6 +106,24 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request, u domain
 		s.fail(w, domain.ErrNotFound)
 		return
 	}
+	if r.URL.Path == "/oauth/authorize" {
+		// The Laravel client skips consent on GET. Its POST/DELETE handlers
+		// still require a one-use auth token and stored authorization request.
+		in, ok := laravelInput(w, r)
+		if !ok {
+			return
+		}
+		supplied := inputString(in, "auth_token")
+		if attributes, ok := s.auth.Sessions.(application.SessionAttributeConsumer); ok && supplied != "" {
+			stored, err := attributes.PullSessionAttribute(r.Context(), application.Digest(token(r)), "oauth_auth_token", s.auth.Now())
+			if err == nil && stored == supplied {
+				respond(w, 500, map[string]string{"message": "Server Error"})
+				return
+			}
+		}
+		respond(w, 403, map[string]string{"message": "The provided auth token for the request is different from the session auth token."})
+		return
+	}
 	var in application.Authorization
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
 		if !decode(w, r, &in) {
@@ -80,7 +132,7 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request, u domain
 	} else {
 		r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
 		if err := r.ParseForm(); err != nil {
-			s.oauthError(w, application.OAuthInvalidRequest)
+			s.oauthError(w, application.OAuthInvalidRequest, r)
 			return
 		}
 		in = parseAuthorization(r.PostForm)
@@ -90,7 +142,7 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request, u domain
 	}
 	target, err := s.auth.OAuth.Authorize(r.Context(), u, in, false)
 	if err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
 		return
 	}
 	target, err = s.walletCallback(r, target)
@@ -99,7 +151,7 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request, u domain
 		return
 	}
 	if r.URL.Path == "/oauth/authorize" {
-		http.Redirect(w, r, target, http.StatusSeeOther)
+		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
 	respond(w, 200, map[string]string{"redirect": target})
@@ -114,22 +166,19 @@ func (s *Server) refreshBrowserToken(w http.ResponseWriter, r *http.Request, u d
 		return
 	}
 	s.setSession(w, session)
-	respond(w, http.StatusOK, map[string]string{"message": "نشست کاربری با موفقیت تمدید شد."})
+	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("Refreshed."))
 }
 func oauthForm(w http.ResponseWriter, r *http.Request) bool {
-	if strings.Split(r.Header.Get("Content-Type"), ";")[0] != "application/x-www-form-urlencoded" {
-		respond(w, 415, map[string]string{"error": "invalid_request", "message": application.OAuthInvalidRequest.PersianMessage(), "error_description": application.OAuthInvalidRequest.PersianMessage()})
+	in, ok := laravelInput(w, r)
+	if !ok {
 		return false
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<10)
-	if err := r.ParseForm(); err != nil {
-		respond(w, 400, map[string]string{"error": "invalid_request", "message": application.OAuthInvalidRequest.PersianMessage(), "error_description": application.OAuthInvalidRequest.PersianMessage()})
-		return false
-	}
-	for _, values := range r.PostForm {
-		if len(values) != 1 {
-			respond(w, 400, map[string]string{"error": "invalid_request", "message": application.OAuthInvalidRequest.PersianMessage(), "error_description": application.OAuthInvalidRequest.PersianMessage()})
-			return false
+	r.PostForm = make(url.Values)
+	for key, value := range in {
+		if text, ok := value.(string); ok {
+			r.PostForm.Set(key, text)
 		}
 	}
 	return true
@@ -164,18 +213,80 @@ func (s *Server) oauthToken(w http.ResponseWriter, r *http.Request) {
 	if !oauthForm(w, r) {
 		return
 	}
+	grant := r.PostForm.Get("grant_type")
+	if grant == "" {
+		s.oauthError(w, passportError{application.OAuthInvalidRequest, "grant_type"}, r)
+		return
+	}
+	if grant != "authorization_code" && grant != "refresh_token" && grant != "password" {
+		s.oauthError(w, application.OAuthError("unsupported_grant_type"), r)
+		return
+	}
+	if r.PostForm.Get("client_id") == "" && r.Header.Get("Authorization") == "" {
+		s.oauthError(w, passportError{application.OAuthInvalidRequest, "client_id"}, r)
+		return
+	}
 	id, secret, err := oauthCredentials(r)
 	if err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
+		return
+	}
+	client, err := s.auth.OAuth.AuthenticateClient(r.Context(), id, secret)
+	if err != nil {
+		s.oauthError(w, err, r)
+		return
+	}
+	if !client.SupportsGrant(grant) {
+		s.oauthError(w, application.OAuthError("unauthorized_client"), r)
+		return
+	}
+	if grant == "password" {
+		for _, key := range []string{"username", "password"} {
+			if r.PostForm.Get(key) == "" {
+				s.oauthError(w, passportError{application.OAuthInvalidRequest, key}, r)
+				return
+			}
+		}
+		if scopes := strings.Fields(r.PostForm.Get("scope")); len(scopes) > 0 {
+			s.oauthError(w, passportError{application.OAuthInvalidScope, scopes[0]}, r)
+			return
+		}
+		u, err := s.auth.Accounts.ByEmail(r.Context(), r.PostForm.Get("username"))
+		if errors.Is(err, domain.ErrNotFound) || (err == nil && !s.auth.Passwords.Matches(u.PasswordHash, r.PostForm.Get("password"))) {
+			s.oauthError(w, application.OAuthError("invalid_credentials"), r)
+			return
+		}
+		if err != nil {
+			s.fail(w, err)
+			return
+		}
+		tokens, err := s.auth.OAuth.PasswordAccess(r.Context(), u.ID, id)
+		if err != nil {
+			s.oauthError(w, err, r)
+			return
+		}
+		passportTokens(w, tokens)
+		return
+	}
+	parameter := "code"
+	if grant == "refresh_token" {
+		parameter = "refresh_token"
+	}
+	if r.PostForm.Get(parameter) == "" {
+		s.oauthError(w, passportError{application.OAuthInvalidRequest, parameter}, r)
 		return
 	}
 	result, err := s.auth.OAuth.Token(r.Context(), id, secret, r.PostForm.Get("grant_type"), r.PostForm.Get("code"), r.PostForm.Get("redirect_uri"), r.PostForm.Get("code_verifier"), r.PostForm.Get("refresh_token"))
 	if err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
 		return
 	}
+	passportTokens(w, result)
+}
+
+func passportTokens(w http.ResponseWriter, result application.OAuthTokens) {
 	w.Header().Set("Pragma", "no-cache")
-	respond(w, 200, result)
+	respond(w, 200, map[string]any{"token_type": result.TokenType, "expires_in": result.ExpiresIn, "access_token": result.AccessToken, "refresh_token": result.RefreshToken})
 }
 func (s *Server) oauthRevoke(w http.ResponseWriter, r *http.Request) {
 	if s.auth.OAuth == nil {
@@ -187,15 +298,15 @@ func (s *Server) oauthRevoke(w http.ResponseWriter, r *http.Request) {
 	}
 	id, secret, err := oauthCredentials(r)
 	if err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
 		return
 	}
 	if _, err = s.auth.OAuth.AuthenticateClient(r.Context(), id, secret); err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
 		return
 	}
 	if err = s.auth.OAuth.Revoke(r.Context(), id, r.PostForm.Get("token")); err != nil {
-		s.oauthError(w, err)
+		s.oauthError(w, err, r)
 		return
 	}
 	w.WriteHeader(http.StatusOK)

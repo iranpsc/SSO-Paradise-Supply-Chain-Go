@@ -89,6 +89,24 @@ func TestPassportJWTLoginCallbackFlagConsumptionAndLogout(t *testing.T) {
 		t.Fatal(err)
 	}
 	query := url.Values{"client_id": {strconv.FormatInt(id, 10)}, "redirect_uri": {"https://client.example/callback"}, "response_type": {"code"}, "scope": {""}, "state": {"bound-state"}}
+	guest := do("GET", "/oauth/authorize?"+query.Encode(), "", "", nil, "")
+	if guest.Code != 302 || guest.Header().Get("Location") != a.PublicURL+"/login" {
+		t.Fatal("guest authorization redirect differs", guest.Code, guest.Header())
+	}
+	var flashCookie *http.Cookie
+	for _, c := range guest.Result().Cookies() {
+		if c.Name == "paradise_flash" {
+			flashCookie = c
+		}
+	}
+	if flashCookie == nil {
+		t.Fatal("intended authorization URL lost")
+	}
+	flash := do("GET", "/api/legacy/flash", "", "", flashCookie, "")
+	var flashBody map[string]string
+	if err := json.Unmarshal(flash.Body.Bytes(), &flashBody); err != nil || flashBody["intended"] != "/oauth/authorize?"+query.Encode() {
+		t.Fatal("signed intended URL lost", flash.Body.String())
+	}
 	callback := do("GET", "/oauth/authorize?"+query.Encode(), "", "", cookie, "")
 	if callback.Code != 302 {
 		t.Fatal(callback.Code, callback.Body.String())
