@@ -238,7 +238,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		s.fail(w, err)
+		if errors.Is(err, domain.ErrCredentials) {
+			respond(w, http.StatusUnauthorized, map[string]string{"message": "Invalid credentials"})
+		} else {
+			s.fail(w, err)
+		}
 		return
 	}
 	if hasFailureLimiter {
@@ -261,7 +265,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	respond(w, 200, map[string]any{"message": "ورود با موفقیت انجام شد.", "token": apiToken})
+	respond(w, 200, map[string]any{"message": "Login successful", "token": apiToken})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request, u domain.User) {
 	if err := s.auth.Logout(r.Context(), u.ID); err != nil {
@@ -269,7 +273,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request, u domain.User) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode})
-	respond(w, 200, map[string]string{"message": "خروج با موفقیت انجام شد."})
+	respond(w, 200, map[string]string{"message": "Logged out successfully"})
 }
 func (s *Server) account(w http.ResponseWriter, r *http.Request, u domain.User) {
 	respond(w, 200, map[string]any{"data": u})

@@ -10,7 +10,7 @@ import (
 )
 
 func TestPersianGeneratedRoutingErrorsAndRequestValidation(t *testing.T) {
-	h := server(t)
+	h := server(t, true)
 	for _, tc := range []struct {
 		method, path, body, contentType string
 		status                          int
@@ -37,6 +37,12 @@ func TestPersianGeneratedRoutingErrorsAndRequestValidation(t *testing.T) {
 		}
 		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
 			t.Fatal("error response is not JSON", err)
+		}
+		if tc.path == "/api/login" && tc.status == http.StatusUnauthorized {
+			if result.Message != "Invalid credentials" {
+				t.Fatal("login error differs from Laravel", result.Message)
+			}
+			continue
 		}
 		messages := []string{result.Message}
 		for _, values := range result.Errors {

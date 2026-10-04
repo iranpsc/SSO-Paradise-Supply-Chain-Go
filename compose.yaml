@@ -55,8 +55,8 @@ services:
         condition: service_healthy
   web:
     build:
-      context: .
-      dockerfile: web/Dockerfile
+      context: ../SSO-Paradise-Supply-Chain-Go-Front
+      dockerfile: Dockerfile
       args:
         API_ORIGIN: http://api:8080
         NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:?Set WalletConnect project ID}

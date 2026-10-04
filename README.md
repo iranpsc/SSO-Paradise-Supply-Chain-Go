@@ -1,6 +1,6 @@
 # SSO Paradise Supply Chain — Go / Next.js
 
-Go implementation of the sibling Laravel SSO, with a Persian RTL Next.js interface, MySQL persistence and optional Redis caching.
+Go implementation of the sibling Laravel SSO, with MySQL persistence and optional Redis caching. The Persian RTL Next.js interface lives in the independent [frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front); clone it alongside this repository for local development and Compose builds.
 
 Implemented flows include registration and email/username login, remember-me, password confirmation/reset/change, Laravel-compatible signed email verification, account/profile editing, private documents and avatars, MetaMask/WalletConnect login and wallet linking, OAuth authorization code/PKCE, rotating refresh tokens, revocation, registration callbacks and unverified-account cleanup.
 
@@ -8,7 +8,7 @@ OAuth follows the custom Laravel client policy: authenticated authorization requ
 
 ## Run locally
 
-Requirements: Go (version in go.mod), Node.js 22.12+, MySQL 8.0.13+ or 9.x; Redis is optional. Integration tests have been run against local MySQL 9.1. Go automatically loads .env from the working directory. Existing process/CI variables take precedence; ENV_FILE selects an explicit file and fails if it is unavailable. Use [.env.example](.env.example) and [web/.env.example](web/.env.example) as configuration references.
+Requirements: Go (version in go.mod), Node.js 22.12+, MySQL 8.0.13+ or 9.x; Redis is optional. Integration tests have been run against local MySQL 9.1. Go automatically loads .env from the working directory. Existing process/CI variables take precedence; ENV_FILE selects an explicit file and fails if it is unavailable. Use [.env.example](.env.example) and [../SSO-Paradise-Supply-Chain-Go-Front/.env.example](../SSO-Paradise-Supply-Chain-Go-Front/.env.example) as configuration references.
 
 From this project root, select a **separate Go database**, then create/migrate it:
 
@@ -22,12 +22,12 @@ go run ./cmd/api
 In a second terminal:
 
 ```powershell
-cd web
+cd ../SSO-Paradise-Supply-Chain-Go-Front
 npm ci
 npm run dev
 ```
 
-Open http://localhost:3000/login. API health: http://127.0.0.1:8080/healthz. PUBLIC_URL must match the browser origin. Copy web/.env.example to web/.env.local for WalletConnect configuration.
+Open http://localhost:3000/login. API health: http://127.0.0.1:8080/healthz. PUBLIC_URL must match the browser origin. Copy ../SSO-Paradise-Supply-Chain-Go-Front/.env.example to ../SSO-Paradise-Supply-Chain-Go-Front/.env.local for WalletConnect configuration.
 
 Development email is written to var/mail. MAIL_MAILER=smtp selects SMTP. Without supplied keys, development creates persistent var/app.key and var/oauth-private.key. Keep these stable between restarts. Production/staging startup validates HTTPS, stable keys and TLS SMTP. SMTP is durably queued by default; run `go run ./cmd/worker` alongside the API. See the [production runbook](docs/production.md).
 
@@ -44,7 +44,7 @@ $env:MYSQL_HOST = '127.0.0.1'
 go test ./...
 go vet ./...
 go build -o bin/sso-paradise-supply-chain.exe ./cmd/api
-cd web
+cd ../SSO-Paradise-Supply-Chain-Go-Front
 npm run typecheck
 npm run build
 $env:PLAYWRIGHT_CHANNEL = 'chrome'
@@ -63,7 +63,7 @@ Go database tests use random disposable paradise_test_* databases. Browser tests
 - internal/domain, application: business rules and interfaces.
 - internal/infrastructure: MySQL, optional Redis, crypto, SMTP/file mail and Metarang.
 - internal/transport/httpapi: HTTP contracts, cookies and rate limits.
-- web/src: Next.js pages and Persian forms, wallet providers and same-origin API rewrites.
+- ../SSO-Paradise-Supply-Chain-Go-Front/src: Next.js pages and Persian forms, wallet providers and same-origin API rewrites.
 
 MySQL is authoritative for session expiry, revocation and credentials even when Redis is available. Cookie-based browser mutations require the configured origin. Tokens are not persisted in browser localStorage.
 

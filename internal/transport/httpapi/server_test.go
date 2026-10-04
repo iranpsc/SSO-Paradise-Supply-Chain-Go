@@ -20,10 +20,13 @@ import (
 type mailer struct{}
 
 func (mailer) Send(context.Context, string, string, string) error { return nil }
-func server(t *testing.T) http.Handler {
+func server(t *testing.T, enableOAuth ...bool) http.Handler {
 	t.Helper()
 	db := mysqltest.Open(t)
 	a := &application.Auth{Accounts: db, Sessions: db, Actions: db, Passwords: security.Bcrypt{Cost: 4}, Mailer: mailer{}, Now: time.Now, PublicURL: "http://localhost:3000", SessionTTL: time.Hour}
+	if len(enableOAuth) > 0 && enableOAuth[0] {
+		a.OAuth = &application.OAuth{Store: db, Passwords: a.Passwords, Now: time.Now}
+	}
 	p := &application.Profile{Store: db}
 	w := &application.Web3{Wallets: db, Challenges: db, Attributes: db, Registry: &stubRegistry{}, Sessions: db, Now: time.Now, SessionTTL: time.Hour, AppName: "Laravel", PublicURL: "http://localhost:3000"}
 	return httpapi.New(a, w, p, a.PublicURL, false, slog.New(slog.NewTextHandler(io.Discard, nil)))

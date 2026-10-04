@@ -11,7 +11,7 @@ Go binaries load .env from the working directory without replacing existing proc
 ```powershell
 go build -o bin/api.exe ./cmd/api
 go build -o bin/worker.exe ./cmd/worker
-cd web
+cd ../SSO-Paradise-Supply-Chain-Go-Front
 npm ci
 npm run build
 npm run start
@@ -21,7 +21,7 @@ Run bin/api.exe and bin/worker.exe from the Go project root in separate managed 
 
 ## Container files
 
-Dockerfile builds the API, worker, migrate/import/manage commands. web/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
+Dockerfile builds the API, worker, migrate/import/manage commands. ../SSO-Paradise-Supply-Chain-Go-Front/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
 
 Docker is unavailable in the current workspace; image builds/Compose startup have **not** been verified here. Native Go and Next builds and browser/database tests are the verified path. Validate these container definitions on the deployment host before using them.
 
