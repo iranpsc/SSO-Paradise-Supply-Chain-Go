@@ -21,6 +21,8 @@ Run bin/api.exe and bin/worker.exe from the Go project root in separate managed 
 
 ## Container files
 
+For **independent Dokploy applications**, use `docker-compose.yml` in each repository and follow [the Dokploy runbook](dokploy.md). The `compose.yaml` described below remains the combined stack for local/manual operation and requires a sibling frontend checkout.
+
 ### Dependency downloads and build arguments
 
 The Go builder defaults to `GOPROXY=https://proxy.golang.org|https://goproxy.cn|direct`. Go's pipe separator retries the next source on HTTP 403 and other download failures; a comma only falls back on 404/410. Git is installed for direct VCS downloads. Checksum verification remains enabled. Override the public mirror with an approved reachable proxy using `docker build --build-arg GOPROXY=... .`, or set GOPROXY in the Compose interpolation env file. Runtime environment variables alone do not set Docker build arguments. All three Go services use the same build configuration. See https://go.dev/ref/mod#environment-variables.
