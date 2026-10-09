@@ -1,3 +1,8 @@
+x-go-build: &go-build
+  context: .
+  args:
+    GOPROXY: ${GOPROXY:-https://proxy.golang.org|https://goproxy.cn|direct}
+
 services:
   mysql:
     image: mysql:8.4
@@ -27,7 +32,7 @@ services:
       timeout: 3s
       retries: 10
   migrate:
-    build: .
+    build: *go-build
     image: paradise-sso-go:local
     command: migrate
     restart: "no"
@@ -39,7 +44,7 @@ services:
         condition: service_healthy
   api:
     stop_grace_period: 45s
-    build: .
+    build: *go-build
     image: paradise-sso-go:local
     restart: unless-stopped
     env_file: deploy/production.env
@@ -64,7 +69,7 @@ services:
       retries: 5
   worker:
     stop_grace_period: 45s
-    build: .
+    build: *go-build
     image: paradise-sso-go:local
     command: worker
     restart: unless-stopped
@@ -84,6 +89,7 @@ services:
       context: ../SSO-Paradise-Supply-Chain-Go-Front
       dockerfile: Dockerfile
       args:
+        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
         API_ORIGIN: http://api:8080
         PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL}
         NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:?Set WalletConnect project ID}

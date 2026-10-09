@@ -1,0 +1,46 @@
+# Independent Dokploy backend; MySQL and Redis are provisioned separately.
+x-backend: &backend
+  image: ${COMPOSE_PROJECT_NAME:-paradise-sso-go}-backend:local
+  build:
+    context: .
+    args:
+      GOPROXY: ${GOPROXY:-https://proxy.golang.org|https://goproxy.cn|direct}
+  env_file: ${SSO_ENV_FILE:-.env}
+  environment:
+    HTTP_ADDR: 0.0.0.0:8080
+    OAUTH_PRIVATE_KEY_PATH: /run/sso-secrets/oauth-private.key
+  volumes:
+    - ${SSO_SECRETS_DIR:-/etc/dokploy/secrets/sso-go}:/run/sso-secrets:ro
+  networks: [dokploy-network]
+
+services:
+  migrate:
+    <<: *backend
+    command: migrate
+    restart: "no"
+  api:
+    <<: *backend
+    restart: unless-stopped
+    stop_grace_period: 45s
+    expose: ["8080"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/readyz']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+  worker:
+    <<: *backend
+    command: worker
+    restart: unless-stopped
+    stop_grace_period: 45s
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+networks:
+  dokploy-network:
+    external: true

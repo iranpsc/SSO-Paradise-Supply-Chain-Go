@@ -1,5 +1,10 @@
 # Go API, commands and mail/cleanup worker
 FROM golang:1.25-alpine AS build
+RUN apk add --no-cache ca-certificates git
+# A pipe permits fallback on 403/timeouts as well as missing modules.
+# Keep Go checksum verification enabled when using a mirror.
+ARG GOPROXY=https://proxy.golang.org|https://goproxy.cn|direct
+ENV GOPROXY=$GOPROXY
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
