@@ -21,6 +21,16 @@ Run bin/api.exe and bin/worker.exe from the Go project root in separate managed 
 
 ## Container files
 
+For **independent Dokploy applications**, use `docker-compose.yml` in each repository and follow [the Dokploy runbook](dokploy.md). The `compose.yaml` described below remains the combined stack for local/manual operation and requires a sibling frontend checkout.
+
+### Dependency downloads and build arguments
+
+The Go builder defaults to `GOPROXY=https://proxy.golang.org|https://goproxy.cn|direct`. Go's pipe separator retries the next source on HTTP 403 and other download failures; a comma only falls back on 404/410. Git is installed for direct VCS downloads. Checksum verification remains enabled. Override the public mirror with an approved reachable proxy using `docker build --build-arg GOPROXY=... .`, or set GOPROXY in the Compose interpolation env file. Runtime environment variables alone do not set Docker build arguments. All three Go services use the same build configuration. See https://go.dev/ref/mod#environment-variables.
+
+For Dokploy Dockerfile deployments, configure these as **build arguments** on the frontend: `API_ORIGIN=https://apidev-accounts.irpsc.com`, `PUBLIC_URL=https://dev-accounts.irpsc.com`, and `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` with your public project ID. Compose already forwards them (API_ORIGIN is its internal API service). `NPM_CONFIG_REGISTRY` optionally selects a reachable npm registry for the frontend build. The npm deprecation warning shown in the deployment log is not a build failure; that web build was canceled after the Go dependency download failed.
+
+For standalone backend containers, use `HTTP_ADDR=0.0.0.0:8080`. `127.0.0.1` for MYSQL_HOST or REDIS_ADDR reaches the container itself; use the actual database/cache service hostname instead. Mount the provisioned OAuth private key and set OAUTH_PRIVATE_KEY_PATH to its path inside the container. The supplied Compose file overrides those addresses and key path, but requires a nonempty REDIS_PASSWORD and MYSQL_ROOT_PASSWORD for its managed services. Match TRUSTED_PROXY_CIDRS to the actual reverse proxy's container/network address. Do not pass APP_KEY, database passwords, SMTP passwords or the private key as build arguments.
+
 Dockerfile builds the API, worker, migrate/import/manage commands. ../SSO-Paradise-Supply-Chain-Go-Front/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
 
 Docker is unavailable in the current workspace; image builds/Compose startup have **not** been verified here. Native Go and Next builds and browser/database tests are the verified path. Validate these container definitions on the deployment host before using them.
