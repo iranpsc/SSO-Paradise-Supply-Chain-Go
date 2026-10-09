@@ -6,7 +6,7 @@ API, worker, import, migrate and manage commands automatically load `.env` from 
 
 Local settings use `APP_ENV=development` and `PUBLIC_URL=http://localhost:3000`. Laravel's local `MAIL_MAILER=log` is mapped to file delivery under `var/mail`, so registration/verification/reset messages can be inspected without sending production mail. The original local RSA key is read from the sibling Laravel `storage/oauth-private.key`; it is not committed or regenerated. The source APP_KEY and cookie name are retained. Normal sessions use the source 120-minute idle lifetime.
 
-`web/.env.local` contains `API_ORIGIN=http://127.0.0.1:8080` and the public WalletConnect project ID from Laravel's JavaScript. All three populated env files (`.env`, `web/.env.local`, `deploy/production.env`) are Git-ignored. The production file is prepared from the supplied server configuration; it must not be loaded on the local workstation.
+`../SSO-Paradise-Supply-Chain-Go-Front/.env.local` contains `API_ORIGIN=http://127.0.0.1:8080` and the public WalletConnect project ID from Laravel's JavaScript. All three populated env files (`.env`, `../SSO-Paradise-Supply-Chain-Go-Front/.env.local`, `deploy/production.env`) are Git-ignored. The production file is prepared from the supplied server configuration; it must not be loaded on the local workstation.
 
 Start from the Go project root:
 
@@ -16,7 +16,7 @@ go run ./cmd/api
 # In a second terminal, from the same directory:
 go run ./cmd/worker
 # In a third terminal:
-cd web
+cd ../SSO-Paradise-Supply-Chain-Go-Front
 npm run dev
 ```
 

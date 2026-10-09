@@ -1,0 +1,674 @@
+{
+    "login": {
+        "empty": {
+            "message": "فیلد پست الکترونیکی الزامی است (and 1 more error)",
+            "errors": {
+                "email": [
+                    "فیلد پست الکترونیکی الزامی است"
+                ],
+                "password": [
+                    "فیلد رمز عبور الزامی است"
+                ]
+            }
+        },
+        "invalid": {
+            "message": "فرمت پست الکترونیکی معتبر نیست. (and 1 more error)",
+            "errors": {
+                "email": [
+                    "فرمت پست الکترونیکی معتبر نیست."
+                ],
+                "password": [
+                    "رمز عبور باید رشته باشد."
+                ]
+            }
+        },
+        "extra": null
+    },
+    "personal_empty": {
+        "message": "فیلد شرکت است؟ الزامی است (and 9 more errors)",
+        "errors": {
+            "is_company": [
+                "فیلد شرکت است؟ الزامی است"
+            ],
+            "first_name": [
+                "فیلد نام الزامی است"
+            ],
+            "last_name": [
+                "فیلد نام خانوادگی الزامی است"
+            ],
+            "mobile": [
+                "فیلد تلفن همراه الزامی است"
+            ],
+            "telephone": [
+                "فیلد تلفن الزامی است"
+            ],
+            "national_code": [
+                "فیلد کد ملی الزامی است"
+            ],
+            "address": [
+                "فیلد نشانی الزامی است"
+            ],
+            "melli_card_scan": [
+                "فیلد اسکن کارت ملی الزامی است"
+            ],
+            "certificate_scan": [
+                "فیلد اسکن شناسنامه الزامی است"
+            ],
+            "bank_card_scan": [
+                "فیلد اسکن کارت بانکی الزامی است"
+            ]
+        }
+    },
+    "user": {
+        "id": 42,
+        "name": "Test",
+        "email": "test@example.com",
+        "mobile": null,
+        "email_verified_at": "2026-01-01T23:34:05.000000Z",
+        "referral": null,
+        "code": "hm-2000042",
+        "created_at": "2026-01-01T23:34:05.000000Z",
+        "updated_at": "2026-01-01T23:34:05.000000Z",
+        "wallet_address": null
+    },
+    "resource": {
+        "id": 42,
+        "name": "Test",
+        "code": "hm-2000042",
+        "avatar": ""
+    },
+    "verified_resource": {
+        "id": 42,
+        "name": "First Last",
+        "code": "hm-2000042",
+        "avatar": ""
+    },
+    "oauth": {
+        "invalid_client": {
+            "status": 401,
+            "body": {
+                "error": "invalid_client",
+                "error_description": "Client authentication failed"
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "invalid_grant": {
+            "status": 400,
+            "body": {
+                "error": "invalid_grant",
+                "error_description": "The provided authorization grant (e.g., authorization code, resource owner credentials) or refresh token is invalid, expired, revoked, does not match the redirection URI used in the authorization request, or was issued to another client.",
+                "hint": ""
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "invalid_scope": {
+            "status": 400,
+            "body": {
+                "error": "invalid_scope",
+                "error_description": "The requested scope is invalid, unknown, or malformed",
+                "hint": "Check the `bad` scope"
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "unsupported_grant_type": {
+            "status": 400,
+            "body": {
+                "error": "unsupported_grant_type",
+                "error_description": "The authorization grant type is not supported by the authorization server.",
+                "hint": "Check that all required parameters have been provided"
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "access_denied": {
+            "status": 401,
+            "body": {
+                "error": "access_denied",
+                "error_description": "The resource owner or authorization server denied the request."
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "unsupported_response_type": {
+            "status": 400,
+            "body": {
+                "error": "invalid_request",
+                "error_description": "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed.",
+                "hint": "Check the `response_type` parameter"
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        },
+        "invalid_request": {
+            "status": 400,
+            "body": {
+                "error": "invalid_request",
+                "error_description": "The request is missing a required parameter, includes an invalid parameter value, includes a parameter more than once, or is otherwise malformed.",
+                "hint": "Check the `grant_type` parameter"
+            },
+            "headers": {
+                "Content-type": [
+                    "application/json"
+                ]
+            }
+        }
+    },
+    "web3_nonce": {
+        "nonce": "Sign in to Laravel at localhost.\n\nWallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nNonce: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "web3_link_nonce": {
+        "nonce": "Link wallet to your Laravel account at localhost.\n\nAccount ID: 42\nWallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nNonce: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "passport_configuration": {
+        "password": false,
+        "device_code": true,
+        "legacy_clients": {
+            "authorization_code": [
+                "authorization_code",
+                "refresh_token"
+            ],
+            "password": [
+                "password",
+                "refresh_token"
+            ],
+            "personal_access": [
+                "personal_access"
+            ]
+        }
+    },
+    "routes": [
+        {
+            "uri": "oauth/token",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "throttle"
+            ]
+        },
+        {
+            "uri": "oauth/authorize",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "oauth/device",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "oauth/device/code",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "throttle"
+            ]
+        },
+        {
+            "uri": "oauth/token/refresh",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "oauth/authorize",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "oauth/authorize",
+            "methods": [
+                "DELETE"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "oauth/device/authorize",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "oauth/device/authorize",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "oauth/device/authorize",
+            "methods": [
+                "DELETE"
+            ],
+            "middleware": [
+                "web",
+                "auth:web"
+            ]
+        },
+        {
+            "uri": "sanctum/csrf-cookie",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "api/login",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "api",
+                "guest"
+            ]
+        },
+        {
+            "uri": "api/logout",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "api",
+                "auth:api"
+            ]
+        },
+        {
+            "uri": "api/me",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "api",
+                "auth:api"
+            ]
+        },
+        {
+            "uri": "api/user",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "api",
+                "auth:api"
+            ]
+        },
+        {
+            "uri": "up",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": []
+        },
+        {
+            "uri": "/",
+            "methods": [
+                "GET",
+                "HEAD",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "web3/nonce",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "throttle:web3",
+                "guest"
+            ]
+        },
+        {
+            "uri": "web3/verify",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "throttle:web3"
+            ]
+        },
+        {
+            "uri": "home",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "web3/link/nonce",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified",
+                "throttle:web3"
+            ]
+        },
+        {
+            "uri": "web3/link",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified",
+                "throttle:web3"
+            ]
+        },
+        {
+            "uri": "account",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "account/edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "account",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "personal-info",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "personal-info/edit",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "personal-info",
+            "methods": [
+                "PUT",
+                "PATCH"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "change-password",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "change-password",
+            "methods": [
+                "PUT"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "verified"
+            ]
+        },
+        {
+            "uri": "login",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "guest"
+            ]
+        },
+        {
+            "uri": "login",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "guest"
+            ]
+        },
+        {
+            "uri": "logout",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "register",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "guest"
+            ]
+        },
+        {
+            "uri": "register",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "guest"
+            ]
+        },
+        {
+            "uri": "password/reset",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "password/email",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "password/reset/{token}",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "password/reset",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web"
+            ]
+        },
+        {
+            "uri": "password/confirm",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "uri": "password/confirm",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "uri": "email/verify",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth"
+            ]
+        },
+        {
+            "uri": "email/verification-notification",
+            "methods": [
+                "POST"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "throttle:6,1"
+            ]
+        },
+        {
+            "uri": "email/verify/{id}/{hash}",
+            "methods": [
+                "GET",
+                "HEAD"
+            ],
+            "middleware": [
+                "web",
+                "auth",
+                "signed",
+                "throttle:6,1"
+            ]
+        }
+    ]
+}

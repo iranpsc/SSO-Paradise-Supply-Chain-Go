@@ -9,9 +9,8 @@ import (
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/domain"
 )
 
-// Web3 wallet authentication, porting Web3AuthController as JSON-only
-// endpoints under /api (browser redirect/session-error variants do not
-// exist; failures preserve Laravel's status semantics with Persian messages).
+// First-party JSON endpoints use Persian display messages. The legacy web
+// adapter preserves Laravel's nonce text, English messages and redirects.
 
 func (s *Server) failWeb3(w http.ResponseWriter, err error) {
 	switch {
@@ -46,7 +45,11 @@ func (s *Server) web3Nonce(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, s.origin+"/home", http.StatusFound)
 		return
 	}
-	nonce, err := s.web3.LoginNonce(r.Context(), r.URL.Query().Get("address"))
+	getNonce := s.web3.LoginNonce
+	if strings.HasPrefix(r.URL.Path, "/web3/") {
+		getNonce = s.web3.LaravelLoginNonce
+	}
+	nonce, err := getNonce(r.Context(), r.URL.Query().Get("address"))
 	if err != nil {
 		s.failWeb3(w, err)
 		return
@@ -79,7 +82,11 @@ func (s *Server) web3Verify(w http.ResponseWriter, r *http.Request) {
 
 // GET /api/web3/link/nonce?address=0x... — authenticated, verified members.
 func (s *Server) web3LinkNonce(w http.ResponseWriter, r *http.Request, u domain.User) {
-	nonce, err := s.web3.LinkNonce(r.Context(), u, r.URL.Query().Get("address"))
+	getNonce := s.web3.LinkNonce
+	if strings.HasPrefix(r.URL.Path, "/web3/") {
+		getNonce = s.web3.LaravelLinkNonce
+	}
+	nonce, err := getNonce(r.Context(), u, r.URL.Query().Get("address"))
 	if err != nil {
 		s.failWeb3(w, err)
 		return

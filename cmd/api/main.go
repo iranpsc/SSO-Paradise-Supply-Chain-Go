@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/envfile"
+	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/logging"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -33,7 +34,10 @@ func env(key, fallback string) string {
 	return fallback
 }
 func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger, err := logging.New()
+	if err != nil {
+		return err
+	}
 	if err := validateEnvironment(); err != nil {
 		return err
 	}
@@ -92,15 +96,15 @@ func run() error {
 		auth.LegacyRememberCookie = "remember_web_" + security.SessionGuardHash()
 	}
 
-	auth.OAuth.AccessTTL, e = durationEnv("OAUTH_ACCESS_TTL", 0)
+	auth.OAuth.AccessTTL, e = durationEnv("OAUTH_ACCESS_TTL", time.Hour)
 	if e != nil {
 		return e
 	}
-	auth.OAuth.RefreshTTL, e = durationEnv("OAUTH_REFRESH_TTL", 0)
+	auth.OAuth.RefreshTTL, e = durationEnv("OAUTH_REFRESH_TTL", 2*time.Hour)
 	if e != nil {
 		return e
 	}
-	auth.OAuth.PersonalTTL, e = durationEnv("OAUTH_PERSONAL_TTL", 0)
+	auth.OAuth.PersonalTTL, e = durationEnv("OAUTH_PERSONAL_TTL", time.Hour)
 	if e != nil {
 		return e
 	}
@@ -177,7 +181,11 @@ func openRedis() *redis.Client {
 			dbNumber = n
 		}
 	}
-	client := redis.NewClient(&redis.Options{Addr: addr, Password: os.Getenv("REDIS_PASSWORD"), DB: dbNumber})
+	password := os.Getenv("REDIS_PASSWORD")
+	if password == "null" {
+		password = ""
+	}
+	client := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: dbNumber})
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := client.Ping(ctx).Err(); err != nil {

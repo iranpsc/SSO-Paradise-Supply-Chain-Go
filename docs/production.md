@@ -11,7 +11,7 @@ Go binaries load .env from the working directory without replacing existing proc
 ```powershell
 go build -o bin/api.exe ./cmd/api
 go build -o bin/worker.exe ./cmd/worker
-cd web
+cd ../SSO-Paradise-Supply-Chain-Go-Front
 npm ci
 npm run build
 npm run start
@@ -21,7 +21,7 @@ Run bin/api.exe and bin/worker.exe from the Go project root in separate managed 
 
 ## Container files
 
-Dockerfile builds the API, worker, migrate/import/manage commands. web/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
+Dockerfile builds the API, worker, migrate/import/manage commands. ../SSO-Paradise-Supply-Chain-Go-Front/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
 
 Docker is unavailable in the current workspace; image builds/Compose startup have **not** been verified here. Native Go and Next builds and browser/database tests are the verified path. Validate these container definitions on the deployment host before using them.
 
@@ -58,7 +58,7 @@ Monitor mail_outbox state counts, worker delivery/cleanup errors, 429s and datab
 
 Existing numeric-ID Laravel clients, RSA access tokens, Defuse V2 encrypted refresh tokens and authorization codes, bcrypt password-reset records, default unencrypted PHP **file sessions**, and AES-256-CBC encrypted session/remember cookies are supported. Enable LARAVEL_SESSION_COOKIE with the exact source cookie name; LARAVEL_REMEMBER_COOKIE defaults to the framework's web-guard name when the session bridge is enabled. Imported source sessions/remember records are revoked together with Go sessions on logout/password reset/change.
 
-Source guest/expired/stale-password sessions are skipped and counted. PHP objects/references, encrypted session-file payloads, non-file session drivers, custom guards, AES-GCM cookie encryption, previous-key rotation and custom Passport encryption callbacks are not inferred automatically. They require explicit adaptation if present in the actual source deployment; the importer rejects unsupported file data rather than interpreting it unsafely. Ordinary application behavior is supported independently of importing old sessions.
+Source guest/expired/stale-password sessions are skipped and counted. PHP objects/references, non-file session drivers, custom guards, AES-GCM cookie encryption, previous-key rotation and custom Passport encryption callbacks are not inferred automatically. They require explicit adaptation if present in the actual source deployment; the importer rejects unsupported file data rather than interpreting it unsafely. Ordinary application behavior is supported independently of importing old sessions.
 
 JWT lifetimes now follow Passport's default calendar year (P1Y) for access, refresh and personal-access tokens. OAUTH_ACCESS_TTL/OAUTH_REFRESH_TTL/OAUTH_PERSONAL_TTL accept positive Go durations to override; blank keeps calendar-year semantics. Normal Go sessions default to a 2h idle window; REMEMBER_SESSION_TTL defaults to Laravel's 576000-minute recaller duration (400 days). SESSION_TTL can be adjusted for the deployment. Activity extends live normal sessions; expired or revoked sessions are never recreated. Remember credentials keep a fixed lifetime. Existing Go sessions retain their previous fixed deadline after upgrade.
 

@@ -1,0 +1,9 @@
+# docker compose --env-file deploy/production.env -f compose.yaml -f compose.dokploy.yaml up --build -d
+services:
+  web:
+    ports: !reset []
+    expose: ["3000"]
+    networks: [default, dokploy-network]
+networks:
+  dokploy-network:
+    external: true

@@ -20,10 +20,13 @@ import (
 type mailer struct{}
 
 func (mailer) Send(context.Context, string, string, string) error { return nil }
-func server(t *testing.T) http.Handler {
+func server(t *testing.T, enableOAuth ...bool) http.Handler {
 	t.Helper()
 	db := mysqltest.Open(t)
 	a := &application.Auth{Accounts: db, Sessions: db, Actions: db, Passwords: security.Bcrypt{Cost: 4}, Mailer: mailer{}, Now: time.Now, PublicURL: "http://localhost:3000", SessionTTL: time.Hour}
+	if len(enableOAuth) > 0 && enableOAuth[0] {
+		a.OAuth = &application.OAuth{Store: db, Passwords: a.Passwords, Now: time.Now}
+	}
 	p := &application.Profile{Store: db}
 	w := &application.Web3{Wallets: db, Challenges: db, Attributes: db, Registry: &stubRegistry{}, Sessions: db, Now: time.Now, SessionTTL: time.Hour, AppName: "Laravel", PublicURL: "http://localhost:3000"}
 	return httpapi.New(a, w, p, a.PublicURL, false, slog.New(slog.NewTextHandler(io.Discard, nil)))
@@ -73,10 +76,10 @@ func TestCookieSessionCSRFAndProtectedRoutes(t *testing.T) {
 		t.Fatal("revoked cookie allowed")
 	}
 }
-func TestRejectsMalformedJSONMassAssignmentAndThrottles(t *testing.T) {
+func TestLaravelLoginInvalidInputAndThrottles(t *testing.T) {
 	h := server(t)
 	for _, body := range []string{`{"email":"x","admin":true}`, `{} {}`, `{`} {
-		if w := request(h, "POST", "/api/login", body, "", nil); w.Code != 400 {
+		if w := request(h, "POST", "/api/login", body, "", nil); w.Code != 422 {
 			t.Fatal("invalid body accepted", w.Code)
 		}
 	}
@@ -139,12 +142,8 @@ func TestLaravelAPIResponseShapes(t *testing.T) {
 		t.Fatal("user contract", w.Body.String())
 	}
 	w = request(h, "GET", "/api/users/1", "", "", nil)
-	var resource struct {
-		Data map[string]json.RawMessage `json:"data"`
-	}
-	json.Unmarshal(w.Body.Bytes(), &resource)
-	if w.Code != 200 || len(resource.Data) != 4 || resource.Data["avatar"] == nil || resource.Data["email"] != nil {
-		t.Fatal("public resource", w.Body.String())
+	if w.Code != http.StatusNotFound {
+		t.Fatal("removed public user route remains accessible", w.Code)
 	}
 	w = request(h, "POST", "/api/login", `{}`, "", nil)
 	var validation struct {

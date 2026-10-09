@@ -78,15 +78,18 @@ func (p PersonalInfo) Validate() Validation {
 }
 
 type Media struct {
-	UserID      int64  `json:"-"`
-	Kind        string `json:"kind"`
-	ContentType string `json:"content_type"`
-	Data        []byte `json:"-"`
+	LegacyPath     string `json:"-"`
+	LegacyAbsolute bool   `json:"-"`
+	UserID         int64  `json:"-"`
+	Kind           string `json:"kind"`
+	ContentType    string `json:"content_type"`
+	Data           []byte `json:"-"`
 }
 
 type PublicProfile struct {
-	ID     int64   `json:"id"`
-	Name   string  `json:"name"`
-	Code   *string `json:"code"`
-	Avatar string  `json:"avatar"`
+	AvatarAbsolute bool    `json:"-"`
+	ID             int64   `json:"id"`
+	Name           string  `json:"name"`
+	Code           *string `json:"code"`
+	Avatar         string  `json:"avatar"`
 }

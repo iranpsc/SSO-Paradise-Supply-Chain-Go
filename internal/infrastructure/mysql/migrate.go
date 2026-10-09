@@ -256,7 +256,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 			return err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE code_sequence SET value=GREATEST(value,COALESCE((SELECT MAX(CAST(SUBSTRING(code,4) AS UNSIGNED)) FROM users WHERE code REGEXP '^hm-[0-9]+$'),2000000)) WHERE id=1`); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE code_sequence SET value=GREATEST(value,COALESCE((SELECT MAX(CAST(SUBSTRING(code,4) AS UNSIGNED)) FROM users WHERE code REGEXP '^hm-[0-9]+$'),1999999)) WHERE id=1`); err != nil {
 		tx.Rollback()
 		return err
 	}

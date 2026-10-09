@@ -15,7 +15,7 @@ func migrateSlidingSessions(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if count > 0 {
-		return nil
+		return migrateMediaPaths(ctx, conn)
 	}
 	if err := conn.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='sessions' AND column_name='idle_seconds'`).Scan(&count); err != nil {
 		return err
@@ -26,7 +26,10 @@ func migrateSlidingSessions(ctx context.Context, conn *sql.Conn) error {
 		}
 	}
 	_, err := conn.ExecContext(ctx, `INSERT INTO schema_migrations(version,applied_at) VALUES(7,?)`, stamp(time.Now()))
-	return err
+	if err != nil {
+		return err
+	}
+	return migrateMediaPaths(ctx, conn)
 }
 
 func (s *Store) CreateSlidingSession(ctx context.Context, id int64, hash string, until time.Time, idle time.Duration) error {

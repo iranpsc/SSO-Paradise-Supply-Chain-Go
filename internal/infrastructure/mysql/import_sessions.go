@@ -18,6 +18,7 @@ type ImportOptions struct {
 	AppKey          []byte
 }
 type importedSession struct {
+	CSRF      string
 	Hash      string
 	User      int64
 	Expiry    time.Time
@@ -71,7 +72,7 @@ func readLaravelFileSessions(ctx context.Context, options ImportOptions, users [
 		if e != nil {
 			return nil, skipped, e
 		}
-		data, e := security.ParsePHPSession(raw)
+		data, e := security.ParseLaravelFileSession(raw, options.AppKey)
 		if e != nil {
 			return nil, skipped, fmt.Errorf("unsupported source session serialization; no session was imported: %w", e)
 		}
@@ -104,6 +105,10 @@ func readLaravelFileSessions(ctx context.Context, options ImportOptions, users [
 		session := importedSession{Hash: securityHash(entry.Name()), User: owner, Expiry: expiry}
 		session.Wallet, _ = data["wallet_login"].(bool)
 		session.Confirmed, _ = data["auth.password_confirmed_at"].(int64)
+		session.CSRF, _ = data["_token"].(string)
+		if len(session.CSRF) > 128 {
+			return nil, skipped, fmt.Errorf("invalid source CSRF token length")
+		}
 		result = append(result, session)
 	}
 	return result, skipped, nil
