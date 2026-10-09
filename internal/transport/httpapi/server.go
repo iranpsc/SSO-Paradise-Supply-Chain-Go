@@ -66,7 +66,6 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	m.HandleFunc("GET /api/account", s.protected(false, s.account))
 	m.HandleFunc("GET /api/user", s.protected(false, func(w http.ResponseWriter, r *http.Request, u domain.User) { respond(w, 200, laravelUser(u)) }))
 	m.HandleFunc("POST /api/me", s.protected(false, s.me))
-	m.HandleFunc("GET /api/users/{user}", s.publicUser)
 	m.HandleFunc("GET /api/users/{user}/avatar", s.publicAvatar)
 	m.HandleFunc("PUT /api/account", s.protected(true, s.updateAccount))
 	m.HandleFunc("PUT /api/change-password", s.protected(true, s.changePassword))
@@ -94,6 +93,8 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	m.HandleFunc("DELETE /oauth/authorize", s.passportWeb(s.oauthAuthorize))
 	m.HandleFunc("POST /oauth/token/refresh", s.passportWeb(s.refreshBrowserToken))
 	m.HandleFunc("GET /api/oauth/authorize", s.oauthConsent)
+	m.HandleFunc("GET /api/oauth/consent", s.protected(false, s.pendingConsent))
+	m.HandleFunc("POST /api/oauth/consent", s.protected(false, s.decideConsent))
 	m.HandleFunc("POST /api/oauth/authorize", s.protected(false, s.oauthAuthorize))
 	m.HandleFunc("POST /oauth/token", s.oauthToken)
 	m.HandleFunc("POST /oauth/revoke", s.oauthRevoke)
@@ -421,6 +422,10 @@ func (s *Server) reset(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		securityHeaders(w, r, s.secure)
+		if s.cors(w, r) {
+			return
+		}
 		if r.Method == "POST" && isLegacyWeb(r.URL.Path) {
 			in, ok := laravelInput(w, r)
 			if !ok {
@@ -438,8 +443,6 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			}
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Referrer-Policy", "no-referrer")
 		if r.Method == "GET" && r.URL.Path == "/readyz" {
 			next.ServeHTTP(w, r)
 			return
@@ -509,7 +512,8 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		}
 		if r.Method != "GET" && r.Method != "HEAD" {
 			origin := r.Header.Get("Origin")
-			if (origin != "" && origin != s.origin) || (r.Header.Get("Sec-Fetch-Site") == "cross-site") {
+			crossOriginAPI := strings.HasPrefix(r.URL.Path, "/api/") && allowedCORSOrigin(origin) && r.Header.Get("Authorization") != "" && !s.hasBrowserCookie(r) && r.Method == http.MethodPost
+			if !crossOriginAPI && ((origin != "" && origin != s.origin) || (r.Header.Get("Sec-Fetch-Site") == "cross-site")) {
 				respond(w, 403, map[string]string{"message": "درخواست از مبدأ مجاز نیست."})
 				return
 			}

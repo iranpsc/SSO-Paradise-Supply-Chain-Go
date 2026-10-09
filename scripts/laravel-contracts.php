@@ -15,7 +15,7 @@ foreach (['empty'=>[], 'invalid'=>['email'=>'invalid','password'=>12], 'extra'=>
         $results['login'][$name] = ['message'=>$exception->getMessage(), 'errors'=>$validator->errors()->toArray()];
     } else { $results['login'][$name] = null; }
 }
-$attributes = ['id'=>42,'name'=>'Test','email'=>'test@example.com','mobile'=>null,'email_verified_at'=>'2026-01-02 03:04:05','password'=>'secret','referral'=>null,'code'=>'hm-2000042','remember_token'=>'secret','created_at'=>'2026-01-02 03:04:05','updated_at'=>'2026-01-02 03:04:05','wallet_address'=>null,'nonce'=>'secret'];
+$attributes = ['id'=>42,'name'=>'Test','email'=>'test@example.com','mobile'=>null,'email_verified_at'=>'2026-01-02 03:04:05','password'=>'secret','referral'=>null,'code'=>'hm-2000042','remember_token'=>'secret','created_at'=>'2026-01-02 03:04:05','updated_at'=>'2026-01-02 03:04:05','wallet_address'=>null];
 $personalRequest = new App\Http\Requests\UpdatePersonalInfoRequest;
 $validator = validator([], $personalRequest->rules());
 $exception = new Illuminate\Validation\ValidationException($validator);

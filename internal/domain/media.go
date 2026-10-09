@@ -10,7 +10,8 @@ import (
 	"strings"
 )
 
-const maxImageBytes = 1 << 20 // 1024KB, matches Laravel max:1024
+const maxImageBytes = 1 << 20    // 1024KB, matches Laravel max:1024
+const MaxDocumentBytes = 2 << 20 // Laravel personal documents: max:2048
 
 var allowedImageMIME = map[string]bool{
 	"image/jpeg": true,
@@ -35,10 +36,21 @@ var dangerousExt = map[string]bool{
 // ValidateImage mirrors Laravel SecureImage (simplified): extension,
 // magic bytes via DetectContentType, decodability for jpeg/png, 1MB cap.
 func ValidateImage(filename string, data []byte) string {
+	return validateImage(filename, data, maxImageBytes)
+}
+
+func ValidateDocument(filename string, data []byte) string {
+	return validateImage(filename, data, MaxDocumentBytes)
+}
+
+func validateImage(filename string, data []byte, limit int) string {
 	if len(data) == 0 {
 		return "فایل معتبر نیست."
 	}
-	if len(data) > maxImageBytes {
+	if len(data) > limit {
+		if limit == MaxDocumentBytes {
+			return "حجم فایل نباید بیشتر از ۲ مگابایت باشد."
+		}
 		return "حجم فایل نباید بیشتر از ۱ مگابایت باشد."
 	}
 	lower := strings.ToLower(strings.TrimSpace(filename))

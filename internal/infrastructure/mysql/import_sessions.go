@@ -72,7 +72,7 @@ func readLaravelFileSessions(ctx context.Context, options ImportOptions, users [
 		if e != nil {
 			return nil, skipped, e
 		}
-		data, e := security.ParsePHPSession(raw)
+		data, e := security.ParseLaravelFileSession(raw, options.AppKey)
 		if e != nil {
 			return nil, skipped, fmt.Errorf("unsupported source session serialization; no session was imported: %w", e)
 		}

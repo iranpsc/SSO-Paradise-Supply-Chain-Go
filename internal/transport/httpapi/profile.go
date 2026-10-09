@@ -75,10 +75,12 @@ func (s *Server) updatePersonalInfo(w http.ResponseWriter, r *http.Request, u do
 	var info domain.PersonalInfo
 	var media []domain.Media
 	if strings.HasPrefix(ct, "multipart/form-data") {
+		r.Body = http.MaxBytesReader(w, r.Body, 7<<20)
 		if err := r.ParseMultipartForm(6 << 20); err != nil {
 			respond(w, 400, map[string]string{"message": "فرم معتبر نیست."})
 			return
 		}
+		defer r.MultipartForm.RemoveAll()
 		isCompany, ok := parseCompanyBool(r.FormValue("is_company"))
 		if !ok {
 			s.fail(w, domain.Validation{"is_company": "نوع حساب الزامی است."})
@@ -104,7 +106,7 @@ func (s *Server) updatePersonalInfo(w http.ResponseWriter, r *http.Request, u do
 			if err != nil {
 				continue
 			}
-			data, err := io.ReadAll(io.LimitReader(f, (1<<20)+1))
+			data, err := io.ReadAll(io.LimitReader(f, domain.MaxDocumentBytes+1))
 			_ = f.Close()
 			if err != nil {
 				s.fail(w, domain.Validation{kind: "خواندن فایل ممکن نشد."})
@@ -114,12 +116,11 @@ func (s *Server) updatePersonalInfo(w http.ResponseWriter, r *http.Request, u do
 				s.fail(w, domain.Validation{kind: "تصویر مدرک الزامی است."})
 				return
 			}
-			if len(data) > (1 << 20) {
-				s.fail(w, domain.Validation{kind: "حجم فایل نباید بیشتر از ۱ مگابایت باشد."})
+			if msg := domain.ValidateDocument(hdr.Filename, data); msg != "" {
+				s.fail(w, domain.Validation{kind: msg})
 				return
 			}
 			contentType := sniff(data)
-			_ = hdr
 			media = append(media, domain.Media{Kind: kind, ContentType: contentType, Data: data})
 		}
 	} else {

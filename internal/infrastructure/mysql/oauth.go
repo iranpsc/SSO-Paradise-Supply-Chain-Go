@@ -21,7 +21,7 @@ func (s *Store) OAuthClient(ctx context.Context, id int64) (application.OAuthCli
 	c := application.OAuthClient{ID: id}
 	var grants []byte
 	var purpose sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT name,COALESCE(secret_hash,''),revoked,grant_types,purpose FROM oauth_clients WHERE id=?`, id).Scan(&c.Name, &c.SecretHash, &c.Revoked, &grants, &purpose)
+	err := s.db.QueryRowContext(ctx, `SELECT name,COALESCE(secret_hash,''),revoked,grant_types,purpose,first_party FROM oauth_clients WHERE id=?`, id).Scan(&c.Name, &c.SecretHash, &c.Revoked, &grants, &purpose, &c.FirstParty)
 	if errors.Is(err, sql.ErrNoRows) {
 		return c, domain.ErrNotFound
 	}

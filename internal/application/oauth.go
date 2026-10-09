@@ -17,12 +17,17 @@ import (
 )
 
 type OAuthClient struct {
+	FirstParty bool     `json:"-"`
 	GrantTypes []string `json:"-"`
 	ID         int64    `json:"id"`
 	Name       string   `json:"name"`
 	SecretHash string   `json:"-"`
 	Redirects  []string `json:"redirect_uris"`
 	Revoked    bool     `json:"-"`
+}
+
+func (c OAuthClient) SkipsAuthorization() bool {
+	return c.FirstParty && c.SecretHash != ""
 }
 
 func (c OAuthClient) SupportsGrant(kind string) bool {

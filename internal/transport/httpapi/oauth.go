@@ -85,6 +85,14 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/oauth/authorize" {
+		if !client.SkipsAuthorization() || r.URL.Query().Get("prompt") == "consent" {
+			if err := s.storeConsent(r, in); err != nil {
+				s.fail(w, err)
+				return
+			}
+			http.Redirect(w, r, s.origin+"/authorize", http.StatusFound)
+			return
+		}
 		in.Approve = true
 		target, err := s.auth.OAuth.Authorize(r.Context(), u, in, false)
 		if err != nil {
@@ -107,21 +115,17 @@ func (s *Server) oauthAuthorize(w http.ResponseWriter, r *http.Request, u domain
 		return
 	}
 	if r.URL.Path == "/oauth/authorize" {
-		// The Laravel client skips consent on GET. Its POST/DELETE handlers
-		// still require a one-use auth token and stored authorization request.
 		in, ok := laravelInput(w, r)
 		if !ok {
 			return
 		}
 		supplied := inputString(in, "auth_token")
-		if attributes, ok := s.auth.Sessions.(application.SessionAttributeConsumer); ok && supplied != "" {
-			stored, err := attributes.PullSessionAttribute(r.Context(), application.Digest(token(r)), "oauth_auth_token", s.auth.Now())
-			if err == nil && stored == supplied {
-				respond(w, 500, map[string]string{"message": "Server Error"})
-				return
-			}
+		target, err := s.completeConsent(r, u, supplied, r.Method != http.MethodDelete)
+		if err != nil {
+			s.consentError(w, err)
+			return
 		}
-		respond(w, 403, map[string]string{"message": "The provided auth token for the request is different from the session auth token."})
+		http.Redirect(w, r, target, http.StatusFound)
 		return
 	}
 	var in application.Authorization
@@ -218,7 +222,7 @@ func (s *Server) oauthToken(w http.ResponseWriter, r *http.Request) {
 		s.oauthError(w, passportError{application.OAuthInvalidRequest, "grant_type"}, r)
 		return
 	}
-	if grant != "authorization_code" && grant != "refresh_token" && grant != "password" {
+	if grant != "authorization_code" && grant != "refresh_token" {
 		s.oauthError(w, application.OAuthError("unsupported_grant_type"), r)
 		return
 	}
@@ -238,34 +242,6 @@ func (s *Server) oauthToken(w http.ResponseWriter, r *http.Request) {
 	}
 	if !client.SupportsGrant(grant) {
 		s.oauthError(w, application.OAuthError("unauthorized_client"), r)
-		return
-	}
-	if grant == "password" {
-		for _, key := range []string{"username", "password"} {
-			if r.PostForm.Get(key) == "" {
-				s.oauthError(w, passportError{application.OAuthInvalidRequest, key}, r)
-				return
-			}
-		}
-		if scopes := strings.Fields(r.PostForm.Get("scope")); len(scopes) > 0 {
-			s.oauthError(w, passportError{application.OAuthInvalidScope, scopes[0]}, r)
-			return
-		}
-		u, err := s.auth.Accounts.ByEmail(r.Context(), r.PostForm.Get("username"))
-		if errors.Is(err, domain.ErrNotFound) || (err == nil && !s.auth.Passwords.Matches(u.PasswordHash, r.PostForm.Get("password"))) {
-			s.oauthError(w, application.OAuthError("invalid_credentials"), r)
-			return
-		}
-		if err != nil {
-			s.fail(w, err)
-			return
-		}
-		tokens, err := s.auth.OAuth.PasswordAccess(r.Context(), u.ID, id)
-		if err != nil {
-			s.oauthError(w, err, r)
-			return
-		}
-		passportTokens(w, tokens)
 		return
 	}
 	parameter := "code"

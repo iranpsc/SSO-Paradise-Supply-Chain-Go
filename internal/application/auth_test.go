@@ -167,7 +167,7 @@ func TestVerificationIsBoundToUserExpiresAndCannotReplay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updated.Code == nil || *updated.Code != "hm-2000001" || updated.EmailVerifiedAt == nil {
+	if updated.Code == nil || *updated.Code != "hm-2000000" || updated.EmailVerifiedAt == nil {
 		t.Fatal("verification did not assign code")
 	}
 	if err := a.SendVerification(ctx, other); err != nil {

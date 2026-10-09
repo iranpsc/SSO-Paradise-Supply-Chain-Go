@@ -1081,56 +1081,6 @@
       "name": "Public",
       "item": [
         {
-          "name": "Get Public User",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/users/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "1"]
-            }
-          },
-          "response": [
-            {
-              "name": "Success (200)",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/1",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "users", "1"]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
-              ],
-              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"code\": null,\n    \"avatar\": \"\"\n  }\n}"
-            },
-            {
-              "name": "Not Found (404)",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/users/99999",
-                  "host": ["{{baseUrl}}"],
-                  "path": ["api", "users", "99999"]
-                }
-              },
-              "status": "Not Found",
-              "code": 404,
-              "header": [
-                { "key": "Content-Type", "value": "application/json; charset=utf-8" }
-              ],
-              "body": "{\n  \"message\": \"یافت نشد.\"\n}"
-            }
-          ]
-        },
-        {
           "name": "Get Public Avatar",
           "request": {
             "method": "GET",

@@ -102,6 +102,9 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err := source.Exec(`ALTER TABLE oauth_clients ADD COLUMN user_id BIGINT NULL; UPDATE oauth_clients SET user_id=7 WHERE id=42`); err != nil {
+		t.Fatal(err)
+	}
 	report, err := target.ImportLaravelWithOptions(ctx, source, root, false, options)
 	if err != nil || report.Applied || report.Users != 1 || report.Media != 1 {
 		t.Fatalf("dry-run: %+v %v", report, err)
@@ -135,7 +138,7 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 		t.Fatalf("profile: %+v %v", profile, err)
 	}
 	client, err := target.OAuthClient(ctx, 42)
-	if err != nil || !(security.Bcrypt{}).Matches(client.SecretHash, "client-secret") {
+	if err != nil || client.FirstParty || client.SkipsAuthorization() || !(security.Bcrypt{}).Matches(client.SecretHash, "client-secret") {
 		t.Fatal("client secret not preserved")
 	}
 	if _, err = target.Media(ctx, 7, "avatars"); err != nil {

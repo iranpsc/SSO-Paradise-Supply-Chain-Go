@@ -13,7 +13,7 @@ func migrateClientGrants(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if count > 0 {
-		return nil
+		return migrateClientOwnership(ctx, conn)
 	}
 	if err := conn.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='oauth_clients' AND column_name='grant_types'`).Scan(&count); err != nil {
 		return err
@@ -24,7 +24,10 @@ func migrateClientGrants(ctx context.Context, conn *sql.Conn) error {
 		}
 	}
 	_, err := conn.ExecContext(ctx, `INSERT INTO schema_migrations(version,applied_at) VALUES(9,?)`, stamp(time.Now()))
-	return err
+	if err != nil {
+		return err
+	}
+	return migrateClientOwnership(ctx, conn)
 }
 
 func (s *Store) IssuePasswordOAuthToken(ctx context.Context, userID, clientID int64, p application.TokenPair) (application.GrantIdentity, error) {

@@ -29,4 +29,4 @@ CREATE TABLE IF NOT EXISTS actions (
  PRIMARY KEY(user_id, kind)
 );
 CREATE TABLE IF NOT EXISTS code_sequence (id INTEGER PRIMARY KEY CHECK(id=1), value INTEGER NOT NULL);
-INSERT OR IGNORE INTO code_sequence(id,value) VALUES(1,2000000);
+INSERT OR IGNORE INTO code_sequence(id,value) VALUES(1,1999999);

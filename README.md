@@ -4,7 +4,7 @@ Go implementation of the sibling Laravel SSO, with MySQL persistence and optiona
 
 Implemented flows include registration and email/username login, remember-me, password confirmation/reset/change, Laravel-compatible signed email verification, account/profile editing, private documents and avatars, MetaMask/WalletConnect login and wallet linking, OAuth authorization code/PKCE, rotating refresh tokens, revocation, registration callbacks and unverified-account cleanup.
 
-OAuth follows the custom Laravel client policy: authenticated authorization requests are approved automatically. RS256 JWTs were tested against the actual sibling Passport dependencies in both directions. Signed verification URLs were checked using Laravel's actual URL validator. Import now supports Passport access/refresh/code records, old password-reset links, default PHP file sessions and Laravel session/remember cookies; see [migration details](docs/migration.md) for exact supported formats.
+OAuth follows the custom Laravel client policy: only confidential first-party clients skip consent; other clients use the /authorize approval screen. The OAuth password grant is disabled, matching upstream. RS256 JWTs were tested against the actual sibling Passport dependencies in both directions. Signed verification URLs were checked using Laravel's actual URL validator. Import now supports Passport access/refresh/code records, old password-reset links, default PHP file sessions and Laravel session/remember cookies; see [migration details](docs/migration.md) for exact supported formats.
 
 ## Run locally
 

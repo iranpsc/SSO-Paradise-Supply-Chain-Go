@@ -142,12 +142,8 @@ func TestLaravelAPIResponseShapes(t *testing.T) {
 		t.Fatal("user contract", w.Body.String())
 	}
 	w = request(h, "GET", "/api/users/1", "", "", nil)
-	var resource struct {
-		Data map[string]json.RawMessage `json:"data"`
-	}
-	json.Unmarshal(w.Body.Bytes(), &resource)
-	if w.Code != 200 || len(resource.Data) != 4 || resource.Data["avatar"] == nil || resource.Data["email"] != nil {
-		t.Fatal("public resource", w.Body.String())
+	if w.Code != http.StatusNotFound {
+		t.Fatal("removed public user route remains accessible", w.Code)
 	}
 	w = request(h, "POST", "/api/login", `{}`, "", nil)
 	var validation struct {

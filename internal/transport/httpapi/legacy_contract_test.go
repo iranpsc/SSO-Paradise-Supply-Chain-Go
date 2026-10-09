@@ -119,12 +119,10 @@ func TestLaravelUserAndResourcesOverHTTP(t *testing.T) {
 	}
 	compare("GET", "/api/user", "user", false)
 	compare("POST", "/api/me", "resource", true)
-	compare("GET", fmt.Sprintf("/api/users/%d", u.ID), "resource", true)
 	if _, err = raw.Exec(`UPDATE personal_infos SET is_verified=1,first_name='First',last_name='Last' WHERE user_id=?`, u.ID); err != nil {
 		t.Fatal(err)
 	}
 	compare("POST", "/api/me", "verified_resource", true)
-	compare("GET", fmt.Sprintf("/api/users/%d", u.ID), "verified_resource", true)
 }
 
 func TestPassportPasswordGrantAndDeviceClientPolicy(t *testing.T) {
@@ -165,28 +163,11 @@ func TestPassportPasswordGrantAndDeviceClientPolicy(t *testing.T) {
 		h.ServeHTTP(w, r)
 		return w
 	}
-	bad := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password=wrong")
-	if bad.Code != 400 || strings.TrimSpace(bad.Body.String()) != `{"error":"invalid_grant","error_description":"The user credentials were incorrect."}` {
-		t.Fatal(bad.Code, bad.Body.String())
-	}
-	result := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password=SecurePass%212026")
-	if result.Code != 200 {
-		t.Fatal(result.Code, result.Body.String())
-	}
-	var body map[string]any
-	if err = json.Unmarshal(result.Body.Bytes(), &body); err != nil {
-		t.Fatal(err)
-	}
-	if len(body) != 4 || body["token_type"] != "Bearer" || body["expires_in"] != float64(3600) || body["access_token"] == "" || body["refresh_token"] == "" {
-		t.Fatal("Passport token response differs", body)
-	}
-	rotated := send("/oauth/token", base+"&grant_type=refresh_token&refresh_token="+body["refresh_token"].(string))
-	if rotated.Code != 200 {
-		t.Fatal(rotated.Code, rotated.Body.String())
-	}
-	replay := send("/oauth/token", base+"&grant_type=refresh_token&refresh_token="+body["refresh_token"].(string))
-	if replay.Code != 400 {
-		t.Fatal("refresh replay accepted", replay.Code)
+	for _, password := range []string{"wrong", "SecurePass%212026"} {
+		result := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password="+password)
+		if result.Code != 400 || !strings.Contains(result.Body.String(), `"error":"unsupported_grant_type"`) {
+			t.Fatal("disabled password grant accepted", result.Code, result.Body.String())
+		}
 	}
 	device := send("/oauth/device/code", fmt.Sprintf("client_id=%d", id))
 	if device.Code != 400 || !strings.Contains(device.Body.String(), `"error":"unauthorized_client"`) {

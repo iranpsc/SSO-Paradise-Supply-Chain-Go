@@ -181,7 +181,7 @@
         "nonce": "Link wallet to your Laravel account at localhost.\n\nAccount ID: 42\nWallet: 0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nNonce: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     "passport_configuration": {
-        "password": true,
+        "password": false,
         "device_code": true,
         "legacy_clients": {
             "authorization_code": [
@@ -346,16 +346,6 @@
             "middleware": [
                 "api",
                 "auth:api"
-            ]
-        },
-        {
-            "uri": "api/users/{user}",
-            "methods": [
-                "GET",
-                "HEAD"
-            ],
-            "middleware": [
-                "api"
             ]
         },
         {

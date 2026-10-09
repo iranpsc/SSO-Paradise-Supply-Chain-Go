@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/envfile"
+	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/logging"
 	"log/slog"
 	"net/http"
 	"net/netip"
@@ -33,7 +34,10 @@ func env(key, fallback string) string {
 	return fallback
 }
 func run() error {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	logger, err := logging.New()
+	if err != nil {
+		return err
+	}
 	if err := validateEnvironment(); err != nil {
 		return err
 	}
@@ -177,7 +181,11 @@ func openRedis() *redis.Client {
 			dbNumber = n
 		}
 	}
-	client := redis.NewClient(&redis.Options{Addr: addr, Password: os.Getenv("REDIS_PASSWORD"), DB: dbNumber})
+	password := os.Getenv("REDIS_PASSWORD")
+	if password == "null" {
+		password = ""
+	}
+	client := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: dbNumber})
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := client.Ping(ctx).Err(); err != nil {

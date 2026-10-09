@@ -7,6 +7,7 @@ import (
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/application"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/cache"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/envfile"
+	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/logging"
 	mailadapter "github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/mail"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/infrastructure/mysql"
 	"github.com/redis/go-redis/v9"
@@ -19,6 +20,11 @@ import (
 )
 
 func run() error {
+	logger, err := logging.New()
+	if err != nil {
+		return err
+	}
+	slog.SetDefault(logger)
 	once := flag.Bool("once", false, "deliver due mail and run cleanup once, then exit")
 	cleanupEvery := flag.Duration("cleanup-every", 0, "override midnight cleanup with a positive interval")
 	flag.Parse()
@@ -61,7 +67,11 @@ func run() error {
 		addr = "127.0.0.1:6379"
 	}
 	number, _ := strconv.Atoi(os.Getenv("REDIS_DB"))
-	client := redis.NewClient(&redis.Options{Addr: addr, Password: os.Getenv("REDIS_PASSWORD"), DB: number})
+	password := os.Getenv("REDIS_PASSWORD")
+	if password == "null" {
+		password = ""
+	}
+	client := redis.NewClient(&redis.Options{Addr: addr, Password: password, DB: number})
 	defer client.Close()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

@@ -17,11 +17,30 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    env_file: deploy/production.env
+    command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD:?Set REDIS_PASSWORD}"']
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: [CMD-SHELL, 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  migrate:
+    build: .
+    image: paradise-sso-go:local
+    command: migrate
+    restart: "no"
+    env_file: deploy/production.env
+    environment:
+      MYSQL_HOST: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
   api:
     stop_grace_period: 45s
     build: .
+    image: paradise-sso-go:local
     restart: unless-stopped
     env_file: deploy/production.env
     environment:
@@ -32,10 +51,12 @@ services:
     volumes:
       - ./deploy/secrets:/run/sso-secrets:ro
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       mysql:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/readyz']
       interval: 15s
@@ -44,6 +65,7 @@ services:
   worker:
     stop_grace_period: 45s
     build: .
+    image: paradise-sso-go:local
     command: worker
     restart: unless-stopped
     env_file: deploy/production.env
@@ -51,7 +73,11 @@ services:
       MYSQL_HOST: mysql
       REDIS_ADDR: redis:6379
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
   web:
     build:
@@ -59,6 +85,7 @@ services:
       dockerfile: Dockerfile
       args:
         API_ORIGIN: http://api:8080
+        PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL}
         NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:?Set WalletConnect project ID}
     restart: unless-stopped
     ports:

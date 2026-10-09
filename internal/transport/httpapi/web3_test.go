@@ -201,7 +201,7 @@ func TestWeb3VerifyLogsInNewWalletUser(t *testing.T) {
 	if u.EmailVerifiedAt == nil {
 		t.Fatal("wallet user is not verified")
 	}
-	if u.Code == nil || *u.Code != "hm-2000001" {
+	if u.Code == nil || *u.Code != "hm-2000000" {
 		t.Fatalf("unexpected wallet code %+v", u.Code)
 	}
 	if u.Email != "" || u.Wallet == nil || *u.Wallet != address {
@@ -290,7 +290,7 @@ func TestWeb3LinkFlow(t *testing.T) {
 		t.Fatalf("wallet not attached: %q %v", mine, err)
 	}
 	pub := request(f.handler, "GET", "/api/users/"+strconv.FormatInt(u.ID, 10), "", "", nil)
-	if pub.Code != 200 {
+	if pub.Code != http.StatusNotFound {
 		t.Fatalf("public user %d", pub.Code)
 	}
 	for _, leak := range []string{"wallet_address", address} {
@@ -527,7 +527,7 @@ func TestWeb3CodesIncrement(t *testing.T) {
 		}
 		codes = append(codes, *u.Code)
 	}
-	if codes[0] != "hm-2000001" || codes[1] != "hm-2000002" {
+	if codes[0] != "hm-2000000" || codes[1] != "hm-2000001" {
 		t.Fatalf("codes did not increment from the sequence: %v", codes)
 	}
 }
