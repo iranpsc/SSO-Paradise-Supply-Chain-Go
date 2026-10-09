@@ -35,6 +35,10 @@ func TestLegacyBrowserCookieRestorationOriginAndLogout(t *testing.T) {
 	if err = db.CreateSession(ctx, u.ID, application.Digest(oldID), now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
+	csrf := strings.Repeat("t", 40)
+	if err = db.SetSessionAttribute(ctx, application.Digest(oldID), "csrf_token", csrf, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
 	auth := &application.Auth{Accounts: db, Sessions: db, Actions: db, Now: time.Now, SessionTTL: time.Hour, LegacySessionCookie: "laravel_session", LegacyCookies: cookieDecoder{oldID}}
 	handler := httpapi.New(auth, nil, nil, "http://localhost:3000", false, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	oldCookie := &http.Cookie{Name: "laravel_session", Value: "encrypted"}
@@ -46,10 +50,13 @@ func TestLegacyBrowserCookieRestorationOriginAndLogout(t *testing.T) {
 	if len(fresh) != 1 || len(fresh[0].Value) != 64 || !fresh[0].HttpOnly {
 		t.Fatal("Go session cookie was not established")
 	}
+	if response = request(handler, "POST", "/logout", `{"_token":"wrong"}`, "", fresh[0]); response.Code != 419 {
+		t.Fatal("bad migrated CSRF accepted", response.Code)
+	}
 	if response = request(handler, "PUT", "/api/account", `{"name":"Legacy","email":"legacy@example.com"}`, "", oldCookie); response.Code != 403 {
 		t.Fatal("source cookie bypassed Origin check")
 	}
-	if response = request(handler, "POST", "/api/logout", "", "http://localhost:3000", fresh[0]); response.Code != 200 {
+	if response = request(handler, "POST", "/logout", `{"_token":"`+csrf+`"}`, "", fresh[0]); response.Code != 302 {
 		t.Fatal(response.Code)
 	}
 	if response = request(handler, "GET", "/api/account", "", "", oldCookie); response.Code != 401 {

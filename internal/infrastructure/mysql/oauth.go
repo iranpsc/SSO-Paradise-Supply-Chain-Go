@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -18,12 +19,21 @@ var oauthSchema string
 
 func (s *Store) OAuthClient(ctx context.Context, id int64) (application.OAuthClient, error) {
 	c := application.OAuthClient{ID: id}
-	err := s.db.QueryRowContext(ctx, `SELECT name,COALESCE(secret_hash,''),revoked FROM oauth_clients WHERE id=?`, id).Scan(&c.Name, &c.SecretHash, &c.Revoked)
+	var grants []byte
+	var purpose sql.NullString
+	err := s.db.QueryRowContext(ctx, `SELECT name,COALESCE(secret_hash,''),revoked,grant_types,purpose,first_party FROM oauth_clients WHERE id=?`, id).Scan(&c.Name, &c.SecretHash, &c.Revoked, &grants, &purpose, &c.FirstParty)
 	if errors.Is(err, sql.ErrNoRows) {
 		return c, domain.ErrNotFound
 	}
 	if err != nil {
 		return c, err
+	}
+	if grants != nil {
+		if err = json.Unmarshal(grants, &c.GrantTypes); err != nil {
+			return c, err
+		}
+	} else if purpose.String == "personal_access" {
+		c.GrantTypes = []string{"personal_access"}
 	}
 	rows, err := s.db.QueryContext(ctx, `SELECT uri FROM oauth_client_redirects WHERE client_id=? ORDER BY uri`, id)
 	if err != nil {
@@ -103,7 +113,7 @@ func grantScopes(ctx context.Context, tx *sql.Tx, id int64) (application.GrantId
 		return application.GrantIdentity{}, err
 	}
 	defer rows.Close()
-	var scopes []string
+	scopes := []string{}
 	for rows.Next() {
 		var scope string
 		if err = rows.Scan(&scope); err != nil {
@@ -239,13 +249,10 @@ func (s *Store) IssuePersonalOAuthToken(ctx context.Context, userID, clientID in
 	if err != nil {
 		return application.GrantIdentity{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO oauth_grant_scopes(grant_id,scope) VALUES(?,'profile')`, id); err != nil {
-		return application.GrantIdentity{}, err
-	}
 	if err = insertOAuthTokens(ctx, tx, id, p); err != nil {
 		return application.GrantIdentity{}, err
 	}
-	return application.GrantIdentity{UserID: userID, Scopes: []string{"profile"}}, tx.Commit()
+	return application.GrantIdentity{UserID: userID, Scopes: []string{}}, tx.Commit()
 }
 
 func (s *Store) BindLegacyCode(ctx context.Context, hash string, clientID int64, redirect, challenge string) error {

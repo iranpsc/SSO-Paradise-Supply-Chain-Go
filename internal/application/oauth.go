@@ -17,13 +17,33 @@ import (
 )
 
 type OAuthClient struct {
+	FirstParty bool     `json:"-"`
+	GrantTypes []string `json:"-"`
 	ID         int64    `json:"id"`
 	Name       string   `json:"name"`
 	SecretHash string   `json:"-"`
 	Redirects  []string `json:"redirect_uris"`
 	Revoked    bool     `json:"-"`
 }
+
+func (c OAuthClient) SkipsAuthorization() bool {
+	return c.FirstParty && c.SecretHash != ""
+}
+
+func (c OAuthClient) SupportsGrant(kind string) bool {
+	if c.GrantTypes == nil {
+		return kind == "authorization_code" || kind == "refresh_token"
+	}
+	for _, grant := range c.GrantTypes {
+		if grant == kind {
+			return true
+		}
+	}
+	return false
+}
+
 type Authorization struct {
+	Laravel      bool   `json:"-"`
 	ClientID     int64  `json:"client_id"`
 	RedirectURI  string `json:"redirect_uri"`
 	ResponseType string `json:"response_type"`
@@ -124,23 +144,30 @@ func (o *OAuth) ValidateAuthorization(ctx context.Context, in Authorization) (OA
 	if err != nil {
 		return c, nil, err
 	}
+	if !c.SupportsGrant("authorization_code") {
+		return c, nil, OAuthError("unauthorized_client")
+	}
+	if in.RedirectURI == "" && len(c.Redirects) == 1 {
+		in.RedirectURI = c.Redirects[0]
+	}
 	allowed := false
 	for _, redirect := range c.Redirects {
 		if in.RedirectURI == redirect {
 			allowed = true
 		}
 	}
-	if !allowed || in.ResponseType != "code" || len(in.State) > 1024 || len(in.RedirectURI) > 2048 || (in.Challenge != "" && (in.Method != "S256" || !pkceChallenge.MatchString(in.Challenge))) || (in.Challenge == "" && (in.Method != "" || c.SecretHash == "")) {
+	validChallenge := in.Method == "S256" && pkceChallenge.MatchString(in.Challenge) || in.Method == "plain" && pkceVerifier.MatchString(in.Challenge)
+	if !allowed || in.ResponseType != "code" || len(in.State) > 1024 || len(in.RedirectURI) > 2048 || (in.Challenge != "" && !validChallenge) || (in.Challenge == "" && (in.Method != "" || c.SecretHash == "")) {
 		return c, nil, OAuthInvalidRequest
 	}
 	scopes := strings.Fields(in.Scope)
-	if len(scopes) == 0 {
+	if len(scopes) == 0 && !in.Laravel {
 		scopes = []string{"profile"}
 	}
 	seen := map[string]bool{}
-	var result []string
+	result := []string{}
 	for _, scope := range scopes {
-		if scope != "profile" {
+		if in.Laravel || scope != "profile" {
 			return c, nil, OAuthInvalidScope
 		}
 		if !seen[scope] {
@@ -151,9 +178,12 @@ func (o *OAuth) ValidateAuthorization(ctx context.Context, in Authorization) (OA
 	return c, result, nil
 }
 func (o *OAuth) Authorize(ctx context.Context, u domain.User, in Authorization, walletLogin bool) (string, error) {
-	_, scopes, err := o.ValidateAuthorization(ctx, in)
+	client, scopes, err := o.ValidateAuthorization(ctx, in)
 	if err != nil {
 		return "", err
+	}
+	if in.RedirectURI == "" && len(client.Redirects) == 1 {
+		in.RedirectURI = client.Redirects[0]
 	}
 	target, err := url.Parse(in.RedirectURI)
 	if err != nil {
@@ -168,7 +198,11 @@ func (o *OAuth) Authorize(ctx context.Context, u domain.User, in Authorization, 
 		if e != nil {
 			return "", e
 		}
-		if err = o.Store.SaveOAuthCode(ctx, OAuthCode{Hash: Digest(code), UserID: u.ID, ClientID: in.ClientID, RedirectURI: in.RedirectURI, Challenge: in.Challenge, Scopes: scopes, ExpiresAt: o.Now().Add(5 * time.Minute)}); err != nil {
+		challenge := in.Challenge
+		if in.Method == "plain" {
+			challenge = PKCE(challenge)
+		}
+		if err = o.Store.SaveOAuthCode(ctx, OAuthCode{Hash: Digest(code), UserID: u.ID, ClientID: in.ClientID, RedirectURI: in.RedirectURI, Challenge: challenge, Scopes: scopes, ExpiresAt: o.Now().Add(5 * time.Minute)}); err != nil {
 			return "", err
 		}
 		query.Set("code", code)
@@ -317,7 +351,7 @@ func (o *OAuth) PersonalAccess(ctx context.Context, userID int64, ttl time.Durat
 		return "", err
 	}
 	if o.Signer != nil {
-		return o.Signer.SignAccess(access, client, userID, []string{"profile"}, now, until)
+		return o.Signer.SignAccess(access, client, userID, []string{}, now, until)
 	}
 	return access, nil
 }

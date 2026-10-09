@@ -5,9 +5,11 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,6 +37,7 @@ type ImportReport struct {
 	AuthorizationCodes int  `json:"authorization_codes"`
 }
 type importedClient struct {
+	firstParty                  bool
 	id                          int64
 	name, secret                string
 	redirects                   []string
@@ -83,7 +86,7 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	if err != nil {
 		return report, err
 	}
-	maxCode := int64(2000000)
+	maxCode := int64(1999999)
 	for rows.Next() {
 		var item importedUser
 		var verified sql.NullTime
@@ -172,14 +175,24 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	}
 	report.Profiles = len(profiles)
 	var clients []importedClient
-	rows, err = read.QueryContext(ctx, `SELECT id,name,COALESCE(secret,''),COALESCE(redirect,''),personal_access_client,password_client,revoked,created_at FROM oauth_clients ORDER BY id`)
+	ownerExpr := "1"
+	for _, column := range []string{"owner_id", "user_id"} {
+		var exists int
+		if err = read.QueryRowContext(ctx, `SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='oauth_clients' AND column_name=?`, column).Scan(&exists); err != nil {
+			return report, err
+		}
+		if exists > 0 {
+			ownerExpr = "COALESCE(CAST(" + column + " AS CHAR),'') IN ('','0')"
+		}
+	}
+	rows, err = read.QueryContext(ctx, `SELECT id,name,COALESCE(secret,''),COALESCE(redirect,''),personal_access_client,password_client,revoked,created_at,`+ownerExpr+` FROM oauth_clients ORDER BY id`)
 	if err != nil {
 		return report, err
 	}
 	for rows.Next() {
 		var c importedClient
 		var redirect string
-		if err = rows.Scan(&c.id, &c.name, &c.secret, &redirect, &c.personal, &c.password, &c.revoked, &c.created); err != nil {
+		if err = rows.Scan(&c.id, &c.name, &c.secret, &redirect, &c.personal, &c.password, &c.revoked, &c.created, &c.firstParty); err != nil {
 			rows.Close()
 			return report, err
 		}
@@ -292,20 +305,31 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 			rows.Close()
 			return report, e
 		}
-		if info.Size() > 1<<20 {
+		limit := 1 << 20
+		validate := domain.ValidateImage
+		if kind != "avatars" {
+			limit = domain.MaxDocumentBytes
+			validate = domain.ValidateDocument
+		}
+		if info.Size() > int64(limit) {
 			rows.Close()
-			return report, fmt.Errorf("media %d exceeds 1 MB", id)
+			return report, fmt.Errorf("media %d exceeds %d bytes", id, limit)
 		}
 		data, e := os.ReadFile(absPath)
 		if e != nil {
 			rows.Close()
 			return report, e
 		}
-		if reason := domain.ValidateImage(filename, data); reason != "" {
+		if reason := validate(filename, data); reason != "" {
 			rows.Close()
 			return report, fmt.Errorf("media %d: %s", id, reason)
 		}
-		media = append(media, domain.Media{UserID: userID, Kind: kind, ContentType: http.DetectContentType(data), Data: data})
+		item := domain.Media{UserID: userID, Kind: kind, ContentType: http.DetectContentType(data), Data: data}
+		if kind == "avatars" {
+			item.LegacyPath = "/storage/" + strconv.FormatInt(id, 10) + "/" + url.PathEscape(filename)
+			item.LegacyAbsolute = disk == "public"
+		}
+		media = append(media, item)
 	}
 	err = rows.Err()
 	rows.Close()
@@ -423,6 +447,11 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 				return report, err
 			}
 		}
+		if session.CSRF != "" {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO session_attributes(token_hash,name,value,expires_at) VALUES(?,'csrf_token',?,?)`, session.Hash, session.CSRF, stamp(session.Expiry)); err != nil {
+				return report, err
+			}
+		}
 		if session.Confirmed > 0 {
 			expiry := time.Unix(session.Confirmed, 0).Add(3 * time.Hour)
 			if expiry.After(session.Expiry) {
@@ -449,7 +478,17 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 		if c.id == personalID {
 			purpose = "personal_access"
 		}
-		if _, err = tx.ExecContext(ctx, `INSERT INTO oauth_clients(id,name,secret_hash,purpose,revoked,created_at) VALUES(?,?,NULLIF(?,''),?,?,?)`, c.id, c.name, c.secret, purpose, c.revoked, c.created); err != nil {
+		types := []string{}
+		if c.personal && c.secret != "" {
+			types = append(types, "personal_access")
+		}
+		if c.password {
+			types = append(types, "password", "refresh_token")
+		} else if len(c.redirects) > 0 && !c.personal {
+			types = append(types, "authorization_code", "refresh_token")
+		}
+		encodedTypes, _ := json.Marshal(types)
+		if _, err = tx.ExecContext(ctx, `INSERT INTO oauth_clients(id,name,secret_hash,purpose,revoked,created_at,grant_types,first_party) VALUES(?,?,NULLIF(?,''),?,?,?,?,?)`, c.id, c.name, c.secret, purpose, c.revoked, c.created, encodedTypes, c.firstParty); err != nil {
 			return report, err
 		}
 		for _, uri := range c.redirects {
@@ -469,6 +508,11 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	for _, m := range media {
 		if err = saveMedia(ctx, tx, m); err != nil {
 			return report, err
+		}
+		if m.LegacyPath != "" {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO media_public_paths(user_id,path,absolute_url) VALUES(?,?,?)`, m.UserID, m.LegacyPath, m.LegacyAbsolute); err != nil {
+				return report, err
+			}
 		}
 	}
 	if err = tx.Commit(); err != nil {

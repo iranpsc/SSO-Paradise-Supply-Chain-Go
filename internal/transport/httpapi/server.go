@@ -2,8 +2,10 @@ package httpapi
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -20,6 +22,7 @@ import (
 const cookieName = "paradise_session"
 
 type Server struct {
+	csrfKey        []byte
 	auth           *application.Auth
 	web3           *application.Web3
 	profiles       *application.Profile
@@ -33,6 +36,13 @@ type Server struct {
 
 func New(auth *application.Auth, web3 *application.Web3, profiles *application.Profile, origin string, secure bool, logger *slog.Logger, trustedProxies ...netip.Prefix) http.Handler {
 	s := &Server{auth: auth, web3: web3, profiles: profiles, origin: origin, secure: secure, log: logger, limits: &limiter{entries: make(map[string]rateState)}}
+	s.csrfKey = append([]byte(nil), auth.SigningKey...)
+	if len(s.csrfKey) == 0 {
+		s.csrfKey = make([]byte, 32)
+		if _, err := rand.Read(s.csrfKey); err != nil {
+			panic(err)
+		}
+	}
 	s.trustedProxies = trustedProxies
 	if shared, ok := auth.Accounts.(application.RateLimiter); ok {
 		s.sharedLimits = shared
@@ -54,9 +64,8 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	m.HandleFunc("POST /api/login", s.login)
 	m.HandleFunc("POST /api/logout", s.protected(false, s.logout))
 	m.HandleFunc("GET /api/account", s.protected(false, s.account))
-	m.HandleFunc("GET /api/user", s.protected(false, func(w http.ResponseWriter, r *http.Request, u domain.User) { respond(w, 200, u) }))
+	m.HandleFunc("GET /api/user", s.protected(false, func(w http.ResponseWriter, r *http.Request, u domain.User) { respond(w, 200, laravelUser(u)) }))
 	m.HandleFunc("POST /api/me", s.protected(false, s.me))
-	m.HandleFunc("GET /api/users/{user}", s.publicUser)
 	m.HandleFunc("GET /api/users/{user}/avatar", s.publicAvatar)
 	m.HandleFunc("PUT /api/account", s.protected(true, s.updateAccount))
 	m.HandleFunc("PUT /api/change-password", s.protected(true, s.changePassword))
@@ -73,16 +82,24 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	m.HandleFunc("POST /api/web3/verify", s.web3Verify)
 	m.HandleFunc("GET /api/web3/link/nonce", s.protected(true, s.web3LinkNonce))
 	m.HandleFunc("POST /api/web3/link", s.protected(true, s.web3Link))
-	m.HandleFunc("GET /email/verify/{id}/{hash}", s.protected(false, s.verifySignedEmail))
+	m.HandleFunc("GET /email/verify/{id}/{hash}", func(w http.ResponseWriter, r *http.Request) {
+		if !s.legacyGuard(w, r, false) {
+			return
+		}
+		s.protected(false, s.verifySignedEmail)(w, r)
+	})
 	m.HandleFunc("GET /oauth/authorize", s.oauthConsent)
-	m.HandleFunc("POST /oauth/authorize", s.protected(false, s.oauthAuthorize))
-	m.HandleFunc("DELETE /oauth/authorize", s.protected(false, s.oauthAuthorize))
-	m.HandleFunc("POST /oauth/token/refresh", s.protected(false, s.refreshBrowserToken))
+	m.HandleFunc("POST /oauth/authorize", s.passportWeb(s.oauthAuthorize))
+	m.HandleFunc("DELETE /oauth/authorize", s.passportWeb(s.oauthAuthorize))
+	m.HandleFunc("POST /oauth/token/refresh", s.passportWeb(s.refreshBrowserToken))
 	m.HandleFunc("GET /api/oauth/authorize", s.oauthConsent)
+	m.HandleFunc("GET /api/oauth/consent", s.protected(false, s.pendingConsent))
+	m.HandleFunc("POST /api/oauth/consent", s.protected(false, s.decideConsent))
 	m.HandleFunc("POST /api/oauth/authorize", s.protected(false, s.oauthAuthorize))
 	m.HandleFunc("POST /oauth/token", s.oauthToken)
 	m.HandleFunc("POST /oauth/revoke", s.oauthRevoke)
 	m.HandleFunc("POST /api/password/confirm", s.protected(false, s.confirmPassword))
+	s.registerLegacyRoutes(m)
 	return s.middleware(localizedRouting(m))
 }
 
@@ -157,7 +174,11 @@ func (s *Server) protected(verified bool, next func(http.ResponseWriter, *http.R
 			u, err = s.auth.OAuth.AccessUser(r.Context(), token(r), "")
 		}
 		if err != nil {
-			s.fail(w, err)
+			if errors.Is(err, domain.ErrCredentials) && legacyAPI(r.URL.Path) {
+				respond(w, 401, map[string]string{"message": "Unauthenticated."})
+			} else {
+				s.fail(w, err)
+			}
 			return
 		}
 		if verified && u.EmailVerifiedAt == nil {
@@ -190,25 +211,8 @@ func (s *Server) register(w http.ResponseWriter, r *http.Request) {
 	respond(w, 201, map[string]any{"data": u, "verification_sent": sent})
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	var in struct {
-		Login    string `json:"login"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Remember bool   `json:"remember"`
-	}
-	if !decode(w, r, &in) {
-		return
-	}
-	identifier := strings.TrimSpace(in.Login)
-	if identifier == "" {
-		identifier = strings.TrimSpace(in.Email)
-	}
-	if in.Login != "" && in.Email != "" {
-		s.fail(w, domain.Validation{"login": "فقط یک نام کاربری یا ایمیل وارد کنید."})
-		return
-	}
-	if identifier == "" || in.Password == "" {
-		s.fail(w, domain.Validation{"login": "نام کاربری یا ایمیل و رمز الزامی است."})
+	identifier, password, remember, ok := s.loginInput(w, r)
+	if !ok {
 		return
 	}
 	peer, _, peerErr := net.SplitHostPort(r.RemoteAddr)
@@ -225,12 +229,13 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if retry > 0 {
-			w.Header().Set("Retry-After", strconv.Itoa(int((retry+time.Second-1)/time.Second)))
-			respond(w, 429, map[string]string{"message": "تعداد تلاش‌ها بیش از حد مجاز است؛ کمی صبر کنید و دوباره تلاش کنید."})
+			seconds := int((retry + time.Second - 1) / time.Second)
+			message := fmt.Sprintf("تعداد تلاش های ناموفق زیاد بود . لطفا بعد از %d ثانیه ی دیگر تلاش کنید .", seconds)
+			respond(w, 429, map[string]any{"message": message, "errors": map[string][]string{"email": {message}}})
 			return
 		}
 	}
-	loggedIn, t, err := s.auth.LoginRemember(r.Context(), identifier, in.Password, in.Remember)
+	loggedIn, t, err := s.auth.LoginRemember(r.Context(), identifier, password, remember)
 	if err != nil {
 		if hasFailureLimiter && errors.Is(err, domain.ErrCredentials) {
 			if e := failures.FailedLogin(r.Context(), failureKey, time.Now()); e != nil {
@@ -238,7 +243,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		s.fail(w, err)
+		if errors.Is(err, domain.ErrCredentials) {
+			respond(w, http.StatusUnauthorized, map[string]string{"message": "Invalid credentials"})
+		} else {
+			s.fail(w, err)
+		}
 		return
 	}
 	if hasFailureLimiter {
@@ -247,7 +256,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if in.Remember {
+	if remember {
 		http.SetCookie(w, &http.Cookie{Name: cookieName, Value: t, Path: "/", HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode, MaxAge: int(s.auth.RememberSessionTTL().Seconds())})
 	} else {
 		s.setSession(w, t)
@@ -261,7 +270,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	respond(w, 200, map[string]any{"message": "ورود با موفقیت انجام شد.", "token": apiToken})
+	respond(w, 200, map[string]any{"message": "Login successful", "token": apiToken})
 }
 func (s *Server) logout(w http.ResponseWriter, r *http.Request, u domain.User) {
 	if err := s.auth.Logout(r.Context(), u.ID); err != nil {
@@ -269,7 +278,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request, u domain.User) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: cookieName, Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode})
-	respond(w, 200, map[string]string{"message": "خروج با موفقیت انجام شد."})
+	respond(w, 200, map[string]string{"message": "Logged out successfully"})
 }
 func (s *Server) account(w http.ResponseWriter, r *http.Request, u domain.User) {
 	respond(w, 200, map[string]any{"data": u})
@@ -277,7 +286,13 @@ func (s *Server) account(w http.ResponseWriter, r *http.Request, u domain.User) 
 func (s *Server) me(w http.ResponseWriter, r *http.Request, u domain.User) {
 	if s.profiles != nil {
 		if p, err := s.profiles.Store.PublicProfile(r.Context(), u.ID); err == nil {
+			if p.AvatarAbsolute {
+				p.Avatar = s.origin + p.Avatar
+			}
 			respond(w, 200, map[string]any{"data": p})
+			return
+		} else {
+			s.fail(w, err)
 			return
 		}
 	}
@@ -286,15 +301,21 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request, u domain.User) {
 func (s *Server) publicUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("user"), 10, 64)
 	if err != nil || id < 1 {
-		s.fail(w, domain.ErrNotFound)
+		s.modelNotFound(w, r.PathValue("user"))
 		return
 	}
 	if s.profiles != nil {
 		if p, err := s.profiles.Store.PublicProfile(r.Context(), id); err == nil {
+			if p.AvatarAbsolute {
+				p.Avatar = s.origin + p.Avatar
+			}
 			respond(w, 200, map[string]any{"data": p})
 			return
 		} else if errors.Is(err, domain.ErrNotFound) {
-			s.fail(w, domain.ErrNotFound)
+			s.modelNotFound(w, r.PathValue("user"))
+			return
+		} else {
+			s.fail(w, err)
 			return
 		}
 	}
@@ -401,9 +422,27 @@ func (s *Server) reset(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		securityHeaders(w, r, s.secure)
+		if s.cors(w, r) {
+			return
+		}
+		if r.Method == "POST" && isLegacyWeb(r.URL.Path) {
+			in, ok := laravelInput(w, r)
+			if !ok {
+				return
+			}
+			method := strings.ToUpper(inputString(in, "_method"))
+			if method == "" {
+				method = strings.ToUpper(r.Header.Get("X-HTTP-Method-Override"))
+			}
+			if method == "PUT" || method == "PATCH" || method == "DELETE" {
+				r.Method = method
+			}
+			if r.MultipartForm == nil {
+				replaceJSONBody(r, in)
+			}
+		}
 		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Referrer-Policy", "no-referrer")
 		if r.Method == "GET" && r.URL.Path == "/readyz" {
 			next.ServeHTTP(w, r)
 			return
@@ -422,7 +461,9 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 			budgetPeer = "user:" + strconv.FormatInt(identity.ID, 10)
 		}
 		decision := rateDecision{}
-		if s.sharedLimits != nil {
+		if isLegacyWeb(r.URL.Path) || strings.HasPrefix(r.URL.Path, "/storage/") {
+			decision = rateDecision{remaining: s.auth.RateLimit}
+		} else if s.sharedLimits != nil {
 			shared, err := s.sharedLimits.CheckRate(r.Context(), budgetPeer, time.Now())
 			if err != nil {
 				s.fail(w, err)
@@ -440,17 +481,18 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 		w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(decision.remaining))
 		if decision.retry > 0 {
 			w.Header().Set("Retry-After", strconv.Itoa(int((decision.retry+time.Second-1)/time.Second)))
-			respond(w, 429, map[string]string{"message": "تعداد تلاش‌ها بیش از حد مجاز است؛ کمی صبر کنید و دوباره تلاش کنید."})
+			rateFailure(w, r)
 			return
 		}
 		// Laravel gives Web3 its own 10/minute budget. API's global budget is
 		// 60/minute in runtime, so normal account flows do not exhaust it.
-		if strings.HasPrefix(r.URL.Path, "/api/web3/") || r.URL.Path == "/api/email/verification-notification" || strings.HasPrefix(r.URL.Path, "/email/verify/") {
+		web3Path := strings.HasPrefix(r.URL.Path, "/api/web3/") || strings.HasPrefix(r.URL.Path, "/web3/")
+		if web3Path || r.URL.Path == "/api/email/verification-notification" || r.URL.Path == "/email/verification-notification" || strings.HasPrefix(r.URL.Path, "/email/verify/") {
 			if named, ok := s.auth.Accounts.(application.NamedRateLimiter); ok {
 				peer := budgetPeer
 				budget := 10
 				namespace := "web3:"
-				if !strings.HasPrefix(r.URL.Path, "/api/web3/") {
+				if !web3Path {
 					budget = 6
 					namespace = "verify:"
 				}
@@ -461,19 +503,22 @@ func (s *Server) middleware(next http.Handler) http.Handler {
 				}
 				if d.Retry > 0 {
 					w.Header().Set("Retry-After", strconv.Itoa(int((d.Retry+time.Second-1)/time.Second)))
-					respond(w, 429, map[string]string{"message": "تعداد تلاش‌ها بیش از حد مجاز است؛ کمی صبر کنید و دوباره تلاش کنید."})
+					rateFailure(w, r)
 					return
 				}
+				w.Header().Set("X-RateLimit-Limit", strconv.Itoa(budget))
+				w.Header().Set("X-RateLimit-Remaining", strconv.Itoa(d.Remaining))
 			}
 		}
 		if r.Method != "GET" && r.Method != "HEAD" {
 			origin := r.Header.Get("Origin")
-			if (origin != "" && origin != s.origin) || (r.Header.Get("Sec-Fetch-Site") == "cross-site") {
+			crossOriginAPI := strings.HasPrefix(r.URL.Path, "/api/") && allowedCORSOrigin(origin) && r.Header.Get("Authorization") != "" && !s.hasBrowserCookie(r) && r.Method == http.MethodPost
+			if !crossOriginAPI && ((origin != "" && origin != s.origin) || (r.Header.Get("Sec-Fetch-Site") == "cross-site")) {
 				respond(w, 403, map[string]string{"message": "درخواست از مبدأ مجاز نیست."})
 				return
 			}
 			// Browser cookie requests require an explicit same-origin check. CLI bearer requests do not.
-			if s.hasBrowserCookie(r) && r.Header.Get("Authorization") == "" && origin != s.origin {
+			if !isLegacyWeb(r.URL.Path) && s.hasBrowserCookie(r) && r.Header.Get("Authorization") == "" && origin != s.origin {
 				respond(w, 403, map[string]string{"message": "مبدأ درخواست مشخص نیست؛ صفحه را تازه‌سازی کنید و دوباره تلاش کنید."})
 				return
 			}

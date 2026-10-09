@@ -46,7 +46,7 @@ func (p *Profile) Update(ctx context.Context, u domain.User, in domain.PersonalI
 		case "image/jpeg":
 			ext = ".jpg"
 		}
-		if msg := domain.ValidateImage(kind+ext, media[i].Data); msg != "" {
+		if msg := domain.ValidateDocument(kind+ext, media[i].Data); msg != "" {
 			return domain.Validation{kind: msg}
 		}
 		media[i].UserID = u.ID

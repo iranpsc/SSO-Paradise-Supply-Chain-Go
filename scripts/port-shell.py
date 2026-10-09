@@ -11,7 +11,8 @@ import shutil
 root = Path(__file__).resolve().parents[1]
 source = root.parent / "SSO-Paradise-Supply-Chain"
 template = (source / "resources/views/components/layouts/app.blade.php").read_text(encoding="utf-8")
-destination = root / "web/src/components/layout"
+frontend = root.parent / "SSO-Paradise-Supply-Chain-Go-Front"
+destination = frontend / "src/components/layout"
 destination.mkdir(parents=True, exist_ok=True)
 
 class JSX(HTMLParser):
@@ -84,6 +85,6 @@ footer = prepare(template[template.index("<footer"):template.index("</footer>") 
 parser = JSX(); parser.feed(footer)
 (destination / "legacy-footer.tsx").write_text('// Content, links, classes and artwork preserved from the Laravel footer.\nexport function LegacyFooter() { return (' + "".join(parser.parts) + '); }\n', encoding="utf-8")
 for folder in ["images/logo", "style/fonts"]:
-    shutil.copytree(source / "public" / folder, root / "web/public" / folder, dirs_exist_ok=True)
+    shutil.copytree(source / "public" / folder, frontend / "public" / folder, dirs_exist_ok=True)
 assert "{{" not in (destination / "legacy-header.tsx").read_text(encoding="utf-8")
 print("Ported original header/footer and local brand assets.")
