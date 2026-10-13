@@ -112,7 +112,7 @@ func TestRateLimitsSharedAcrossConnectionsAndRestarts(t *testing.T) {
 func TestExistingOAuthVersionUpgradesOperationalTables(t *testing.T) {
 	store := mysqltest.Open(t)
 	raw := rawDB(t, store.DSN())
-	if _, err := raw.Exec(`DELETE FROM schema_migrations WHERE version>=4;DROP TABLE legacy_remember_tokens;DROP TABLE legacy_password_resets;DROP TABLE mail_outbox;DROP TABLE rate_limits;ALTER TABLE oauth_codes DROP COLUMN legacy`); err != nil {
+	if _, err := raw.Exec(`DELETE FROM schema_migrations WHERE version>=4;DROP TABLE remember_tokens;DROP TABLE password_reset_tokens;DROP TABLE mail_outbox;DROP TABLE rate_limits;ALTER TABLE oauth_codes DROP COLUMN legacy`); err != nil {
 		t.Fatal(err)
 	}
 	if err := mysql.Migrate(context.Background(), raw); err != nil {

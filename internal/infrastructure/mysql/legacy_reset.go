@@ -20,7 +20,7 @@ func (s *Store) ResetLegacyPassword(ctx context.Context, email, token, password 
 	defer tx.Rollback()
 	var id int64
 	var hash string
-	err = tx.QueryRowContext(ctx, `SELECT r.user_id,r.token_hash FROM legacy_password_resets r JOIN users u ON u.id=r.user_id WHERE u.email=? AND r.expires_at>? FOR UPDATE`, email, stamp(now)).Scan(&id, &hash)
+	err = tx.QueryRowContext(ctx, `SELECT r.user_id,r.token_hash FROM password_reset_tokens r JOIN users u ON u.id=r.user_id WHERE u.email=? AND r.expires_at>? FOR UPDATE`, email, stamp(now)).Scan(&id, &hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.ErrToken
 	}
@@ -44,8 +44,8 @@ func resetAccountPassword(ctx context.Context, tx *sql.Tx, id int64, password st
 		{`DELETE FROM sessions WHERE user_id=?`, []any{id}},
 		{`UPDATE oauth_grants SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL`, []any{stamp(now), id}},
 		{`DELETE FROM actions WHERE user_id=? AND kind='reset'`, []any{id}},
-		{`DELETE FROM legacy_password_resets WHERE user_id=?`, []any{id}},
-		{`DELETE FROM legacy_remember_tokens WHERE user_id=?`, []any{id}},
+		{`DELETE FROM password_reset_tokens WHERE user_id=?`, []any{id}},
+		{`DELETE FROM remember_tokens WHERE user_id=?`, []any{id}},
 	} {
 		if _, err := tx.ExecContext(ctx, statement.sql, statement.args...); err != nil {
 			return err

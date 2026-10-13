@@ -145,6 +145,7 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	}
 	report.Users = len(users)
 	profiles := map[int64]domain.PersonalInfo{}
+	profileVerification := map[int64]int64{}
 	profileOwners := map[int64]int64{}
 	rows, err = read.QueryContext(ctx, `SELECT id,user_id,is_company,COALESCE(first_name,''),COALESCE(last_name,''),COALESCE(mobile,''),COALESCE(telephone,''),COALESCE(national_code,''),COALESCE(address,''),COALESCE(company_name,''),COALESCE(company_address,''),COALESCE(company_registration_number,''),COALESCE(company_national_number,''),COALESCE(company_tax_number,''),COALESCE(company_executive_name,''),is_verified,COALESCE(verification_messages,'') FROM personal_infos ORDER BY id`)
 	if err != nil {
@@ -153,7 +154,8 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	for rows.Next() {
 		var id int64
 		var p domain.PersonalInfo
-		if err = rows.Scan(&id, &p.UserID, &p.IsCompany, &p.FirstName, &p.LastName, &p.Mobile, &p.Telephone, &p.NationalCode, &p.Address, &p.CompanyName, &p.CompanyAddress, &p.CompanyRegistrationNumber, &p.CompanyNationalNumber, &p.CompanyTaxNumber, &p.CompanyExecutiveName, &p.IsVerified, &p.VerificationMessages); err != nil {
+		var verification int64
+		if err = rows.Scan(&id, &p.UserID, &p.IsCompany, &p.FirstName, &p.LastName, &p.Mobile, &p.Telephone, &p.NationalCode, &p.Address, &p.CompanyName, &p.CompanyAddress, &p.CompanyRegistrationNumber, &p.CompanyNationalNumber, &p.CompanyTaxNumber, &p.CompanyExecutiveName, &verification, &p.VerificationMessages); err != nil {
 			rows.Close()
 			return report, err
 		}
@@ -165,7 +167,11 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 			rows.Close()
 			return report, err
 		}
+		// Laravel exposes this signed integer without a model cast. Preserve
+		// the raw value, and use PHP's nonzero truthiness for application reads.
+		p.IsVerified = verification != 0
 		profiles[p.UserID] = p
+		profileVerification[p.UserID] = verification
 		profileOwners[id] = p.UserID
 	}
 	err = rows.Err()
@@ -421,7 +427,7 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 			if err = writeProfile(ctx, tx, p); err != nil {
 				return report, err
 			}
-			if _, err = tx.ExecContext(ctx, `UPDATE personal_infos SET is_verified=? WHERE user_id=?`, p.IsVerified, u.ID); err != nil {
+			if _, err = tx.ExecContext(ctx, `UPDATE personal_infos SET is_verified=? WHERE user_id=?`, profileVerification[u.ID], u.ID); err != nil {
 				return report, err
 			}
 		}
@@ -433,7 +439,7 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 	}
 	for _, item := range users {
 		if item.remember != "" {
-			if _, err = tx.ExecContext(ctx, `INSERT INTO legacy_remember_tokens(user_id,token_hash,expires_at) VALUES(?,?,?)`, item.user.ID, securityHash(item.remember), stamp(time.Now().Add(400*24*time.Hour))); err != nil {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO remember_tokens(user_id,token_hash,expires_at) VALUES(?,?,?)`, item.user.ID, securityHash(item.remember), stamp(time.Now().Add(400*24*time.Hour))); err != nil {
 				return report, err
 			}
 		}
@@ -498,7 +504,7 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 		}
 	}
 	for _, reset := range resets {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO legacy_password_resets(user_id,token_hash,expires_at) VALUES(?,?,?)`, reset.User, reset.Hash, stamp(reset.Expiry)); err != nil {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO password_reset_tokens(user_id,token_hash,expires_at) VALUES(?,?,?)`, reset.User, reset.Hash, stamp(reset.Expiry)); err != nil {
 			return report, err
 		}
 	}
