@@ -52,7 +52,7 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, apply bool) (Cleanup
 		}
 		result.DeletedUsers += n
 	}
-	for _, table := range []string{"sessions", "actions", "challenges", "session_attributes", "registration_callbacks", "legacy_password_resets", "legacy_remember_tokens"} {
+	for _, table := range []string{"sessions", "actions", "challenges", "session_attributes", "registration_callbacks", "password_reset_tokens", "remember_tokens"} {
 		r, e := tx.ExecContext(ctx, "DELETE FROM `"+table+"` WHERE expires_at<=?", stamp(now))
 		if e != nil {
 			return result, e

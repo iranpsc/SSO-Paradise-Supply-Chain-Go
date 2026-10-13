@@ -206,7 +206,7 @@ func (s *Store) RevokeSessions(ctx context.Context, id int64) error {
 	if _, err = tx.ExecContext(ctx, "UPDATE oauth_grants SET revoked_at=? WHERE user_id=? AND revoked_at IS NULL", stamp(time.Now()), id); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM legacy_remember_tokens WHERE user_id=?`, id); err != nil {
+	if _, err = tx.ExecContext(ctx, `DELETE FROM remember_tokens WHERE user_id=?`, id); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -222,7 +222,7 @@ func (s *Store) SaveAction(ctx context.Context, id int64, kind, hash, email stri
 		return err
 	}
 	if kind == "reset" {
-		if _, err = tx.ExecContext(ctx, `DELETE FROM legacy_password_resets WHERE user_id=?`, id); err != nil {
+		if _, err = tx.ExecContext(ctx, `DELETE FROM password_reset_tokens WHERE user_id=?`, id); err != nil {
 			return err
 		}
 	}
@@ -321,7 +321,7 @@ func (s *Store) ChangePassword(ctx context.Context, id int64, hash, keepSession 
 	if _, err := tx.ExecContext(ctx, "DELETE FROM sessions WHERE user_id=? AND token_hash<>?", id, keepSession); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM legacy_remember_tokens WHERE user_id=?`, id); err != nil {
+	if _, err = tx.ExecContext(ctx, `DELETE FROM remember_tokens WHERE user_id=?`, id); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -329,7 +329,7 @@ func (s *Store) ChangePassword(ctx context.Context, id int64, hash, keepSession 
 
 func (s *Store) PersonalInfo(ctx context.Context, id int64) (domain.PersonalInfo, error) {
 	var p domain.PersonalInfo
-	err := s.db.QueryRowContext(ctx, `SELECT user_id,first_name,last_name,is_verified,is_company,mobile,telephone,national_code,address,company_name,company_address,company_registration_number,company_national_number,company_tax_number,company_executive_name,verification_messages FROM personal_infos WHERE user_id=?`, id).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.IsVerified, &p.IsCompany, &p.Mobile, &p.Telephone, &p.NationalCode, &p.Address, &p.CompanyName, &p.CompanyAddress, &p.CompanyRegistrationNumber, &p.CompanyNationalNumber, &p.CompanyTaxNumber, &p.CompanyExecutiveName, &p.VerificationMessages)
+	err := s.db.QueryRowContext(ctx, `SELECT user_id,first_name,last_name,(is_verified <> 0),is_company,mobile,telephone,national_code,address,company_name,company_address,company_registration_number,company_national_number,company_tax_number,company_executive_name,verification_messages FROM personal_infos WHERE user_id=?`, id).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.IsVerified, &p.IsCompany, &p.Mobile, &p.Telephone, &p.NationalCode, &p.Address, &p.CompanyName, &p.CompanyAddress, &p.CompanyRegistrationNumber, &p.CompanyNationalNumber, &p.CompanyTaxNumber, &p.CompanyExecutiveName, &p.VerificationMessages)
 	if errors.Is(err, sql.ErrNoRows) {
 		err = domain.ErrNotFound
 	}
@@ -348,7 +348,7 @@ func (s *Store) SavePersonalInfo(ctx context.Context, p domain.PersonalInfo, med
 	}
 	defer tx.Rollback()
 	var verified bool
-	if err = tx.QueryRowContext(ctx, "SELECT is_verified FROM personal_infos WHERE user_id=? FOR UPDATE", p.UserID).Scan(&verified); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT (is_verified <> 0) FROM personal_infos WHERE user_id=? FOR UPDATE", p.UserID).Scan(&verified); err != nil {
 		return err
 	}
 	p.IsVerified = verified

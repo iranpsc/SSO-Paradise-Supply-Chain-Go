@@ -37,7 +37,7 @@ func migrateLegacySessions(ctx context.Context, conn *sql.Conn) error {
 }
 func (s *Store) LegacyRememberUser(ctx context.Context, id int64, hash string, now time.Time) (domain.User, error) {
 	var owner int64
-	err := s.db.QueryRowContext(ctx, `SELECT user_id FROM legacy_remember_tokens WHERE user_id=? AND token_hash=? AND expires_at>?`, id, hash, stamp(now)).Scan(&owner)
+	err := s.db.QueryRowContext(ctx, `SELECT user_id FROM remember_tokens WHERE user_id=? AND token_hash=? AND expires_at>?`, id, hash, stamp(now)).Scan(&owner)
 	if errors.Is(err, sql.ErrNoRows) {
 		return domain.User{}, domain.ErrCredentials
 	}

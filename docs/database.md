@@ -102,10 +102,10 @@ schema_migrations records applied versions and timestamps; immutable historical 
 | rate_limits.peer_hash | CHAR(64) ASCII binary | PK; digest of resolved user/IP and budget namespace |
 | rate_limits.window_start / blocked_until | DATETIME(6), last nullable | Shared request window and ban deadline |
 | rate_limits.request_count / strikes | SMALLINT UNSIGNED / TINYINT UNSIGNED | Atomic budget and persistent capped penalty history |
-| legacy_password_resets.user_id | BIGINT | PK/FK owner, cascade |
-| legacy_password_resets.token_hash / expires_at | VARCHAR(255) / DATETIME(6) | Preserved Laravel bcrypt reset hash and absolute expiry |
-| legacy_remember_tokens.user_id | BIGINT | PK/FK owner, cascade |
-| legacy_remember_tokens.token_hash / expires_at | CHAR(64) ASCII binary / DATETIME(6) | Digest of source remember credential and expiry |
+| password_reset_tokens.user_id | BIGINT | PK/FK owner, cascade |
+| password_reset_tokens.token_hash / expires_at | VARCHAR(255) / DATETIME(6) | Preserved Laravel bcrypt reset hash and absolute expiry |
+| remember_tokens.user_id | BIGINT | PK/FK owner, cascade |
+| remember_tokens.token_hash / expires_at | CHAR(64) ASCII binary / DATETIME(6) | Digest of source remember credential and expiry |
 | oauth_codes.legacy | BOOLEAN | Defaults false; imported codes bind authenticated encrypted metadata once |
 
-Additional indexes: mail_outbox(state,available_at,id) for worker claims; mail_outbox(expires_at,state) for deadline enforcement; expiry indexes on legacy_password_resets and legacy_remember_tokens. Imported file-session IDs are digested into the existing sessions table; confirmation/callback state uses session_attributes. Primitive parser limits and cookie-name MAC checks are documented in migration.md.
+Additional indexes: mail_outbox(state,available_at,id) for worker claims; mail_outbox(expires_at,state) for deadline enforcement; expiry indexes on password_reset_tokens and remember_tokens. Imported file-session IDs are digested into the existing sessions table; confirmation/callback state uses session_attributes. Primitive parser limits and cookie-name MAC checks are documented in migration.md.

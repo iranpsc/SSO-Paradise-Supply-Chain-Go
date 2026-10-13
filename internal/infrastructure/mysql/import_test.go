@@ -23,7 +23,12 @@ import (
 
 func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	source := rawDB(t, mysqltest.Database(t))
-	target := mysqltest.Open(t)
+	targetDSN := mysqltest.Database(t)
+	target, err := mysql.Open(targetDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { target.Close() })
 	ctx := context.Background()
 	schema := `CREATE TABLE users(id BIGINT PRIMARY KEY,mobile VARCHAR(255),updated_at DATETIME(6),name VARCHAR(255),email VARCHAR(255),password VARCHAR(255),code VARCHAR(255),referral VARCHAR(255),email_verified_at DATETIME(6),created_at DATETIME(6),wallet_address VARCHAR(255),remember_token VARCHAR(100));
  CREATE TABLE personal_infos(id BIGINT PRIMARY KEY,user_id BIGINT,is_company BOOLEAN,first_name VARCHAR(255),last_name VARCHAR(255),mobile VARCHAR(255),telephone VARCHAR(255),national_code VARCHAR(255),address VARCHAR(255),company_name VARCHAR(255),company_address VARCHAR(255),company_registration_number VARCHAR(255),company_national_number VARCHAR(255),company_tax_number VARCHAR(255),company_executive_name VARCHAR(255),is_verified BOOLEAN,verification_messages JSON);
@@ -44,7 +49,7 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 	if _, err = source.Exec(`INSERT INTO users(id,mobile,updated_at,name,email,password,code,created_at) VALUES(7,'09123456789',?,'Legacy','LEGACY@example.com',?,'hm-2000099',?)`, now, hash, now); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = source.Exec(`INSERT INTO personal_infos(id,user_id,is_company,first_name,last_name,mobile,national_code,company_registration_number,is_verified) VALUES(11,7,0,'Old','Member','09123456789','0012345678','000123',0)`); err != nil {
+	if _, err = source.Exec(`INSERT INTO personal_infos(id,user_id,is_company,first_name,last_name,mobile,national_code,company_registration_number,is_verified) VALUES(11,7,0,'Old','Member','09123456789','0012345678','000123',-1)`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err = source.Exec(`INSERT INTO oauth_clients(id,name,secret,redirect,personal_access_client,password_client,revoked,created_at) VALUES(42,'Old client','client-secret','https://client.example/callback',0,0,0,?)`, now); err != nil {
@@ -134,10 +139,17 @@ func TestLaravelImportDryRunAtomicApplyAndMedia(t *testing.T) {
 		t.Fatalf("user not preserved: %+v %v", user, err)
 	}
 	profile, err := target.PersonalInfo(ctx, 7)
-	if err != nil || profile.NationalCode != "0012345678" || profile.CompanyRegistrationNumber != "000123" {
+	if err != nil || !profile.IsVerified || profile.NationalCode != "0012345678" || profile.CompanyRegistrationNumber != "000123" {
 		t.Fatalf("profile: %+v %v", profile, err)
 	}
 	client, err := target.OAuthClient(ctx, 42)
+	if err := target.SavePersonalInfo(ctx, profile, nil); err != nil {
+		t.Fatalf("editing imported signed verification status: %v", err)
+	}
+	var rawVerification int
+	if err := rawDB(t, targetDSN).QueryRow(`SELECT is_verified FROM personal_infos WHERE user_id=7`).Scan(&rawVerification); err != nil || rawVerification != -1 {
+		t.Fatalf("signed verification status changed: %d, %v", rawVerification, err)
+	}
 	if err != nil || client.FirstParty || client.SkipsAuthorization() || !(security.Bcrypt{}).Matches(client.SecretHash, "client-secret") {
 		t.Fatal("client secret not preserved")
 	}
