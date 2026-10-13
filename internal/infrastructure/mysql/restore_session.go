@@ -30,7 +30,7 @@ func (s *Store) RestoreLegacySession(ctx context.Context, in application.LegacyS
 	if in.SourceHash != "" {
 		err = tx.QueryRowContext(ctx, `SELECT 1 FROM sessions WHERE user_id=? AND token_hash=? AND expires_at>? FOR UPDATE`, in.Owner, in.SourceHash, stamp(in.Now)).Scan(&found)
 	} else if in.RememberHash != "" {
-		err = tx.QueryRowContext(ctx, `SELECT 1 FROM legacy_remember_tokens WHERE user_id=? AND token_hash=? AND expires_at>? FOR UPDATE`, in.Owner, in.RememberHash, stamp(in.Now)).Scan(&found)
+		err = tx.QueryRowContext(ctx, `SELECT 1 FROM remember_tokens WHERE user_id=? AND token_hash=? AND expires_at>? FOR UPDATE`, in.Owner, in.RememberHash, stamp(in.Now)).Scan(&found)
 	} else {
 		return u, domain.ErrCredentials
 	}
