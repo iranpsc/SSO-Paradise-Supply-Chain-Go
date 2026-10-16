@@ -23,8 +23,8 @@ func validateEnvironment() error {
 	if mode == "development" {
 		return nil
 	}
-	if u.Scheme != "https" {
-		return errors.New("production/staging PUBLIC_URL requires HTTPS")
+	if u.Scheme != "https" && os.Getenv("ALLOW_INSECURE_HTTP") != "true" {
+		return errors.New("production/staging PUBLIC_URL requires HTTPS unless ALLOW_INSECURE_HTTP=true")
 	}
 	key := os.Getenv("APP_KEY")
 	if key == "" {

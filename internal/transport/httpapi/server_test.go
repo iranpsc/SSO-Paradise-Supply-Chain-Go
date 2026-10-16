@@ -55,6 +55,9 @@ func TestCookieSessionCSRFAndProtectedRoutes(t *testing.T) {
 		t.Fatal("unsafe session cookie")
 	}
 	cookie := cookies[0]
+	if cookie.Secure || w.Header().Get("Strict-Transport-Security") != "" {
+		t.Fatal("HTTP login must not require HTTPS cookies or advertise HSTS")
+	}
 	if strings.Contains(w.Body.String(), "password_hash") || strings.Contains(w.Body.String(), "Secure!") {
 		t.Fatal("secret in response")
 	}

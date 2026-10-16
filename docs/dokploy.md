@@ -26,3 +26,25 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=YOUR_PUBLIC_PROJECT_ID
 The Compose file forwards the three public configuration values as build arguments automatically. No backend secrets belong in the frontend environment. Add domain `dev-accounts.irpsc.com`, targeting service **web**, container port **3000**, with HTTPS. Deploy the backend first, then the frontend. Redeploy/rebuild the frontend when API_ORIGIN or the public project ID changes.
 
 Both applications require Dokploy's existing external `dokploy-network`. Neither publishes host ports; Dokploy's reverse proxy reaches the container ports through that network.
+
+## HTTP-only production
+
+Keep `APP_ENV=production`; explicitly opt into HTTP on the backend:
+
+```dotenv
+APP_ENV=production
+ALLOW_INSECURE_HTTP=true
+PUBLIC_URL=http://dev-accounts.irpsc.com
+```
+
+Keep the existing APP_KEY, OAuth private key, SMTP TLS and other production settings. The opt-in only relaxes the public URL's HTTPS requirement. HTTP public URLs produce cookies without Secure and no application HSTS header. HTTPS URLs retain Secure cookies and HSTS, even when the opt-in is enabled. Passwords and session credentials sent over HTTP are unencrypted.
+
+Set the frontend build environment:
+
+```dotenv
+NODE_ENV=production
+PUBLIC_URL=http://dev-accounts.irpsc.com
+API_ORIGIN=http://apidev-accounts.irpsc.com
+```
+
+Keep NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID unchanged. Rebuild/redeploy both applications. In Dokploy, use HTTP for both domains and disable forced HTTPS redirects or proxy-added HSTS. Configure the connected systems to use the HTTP SSO URL; OAuth callback URLs must exactly match each client's registered redirect URI. Existing browser HSTS (including inherited parent-domain policies) can still force HTTPS; removing application headers does not clear it. A parent HSTS policy must be resolved at that domain before its subdomains can use HTTP. Changing web transport does not disable SMTP TLS or HTTPS calls to external services.
