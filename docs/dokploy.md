@@ -1,6 +1,6 @@
 # Independent Dokploy deployments
 
-Use a separate Compose application for each repository. In **both**, set Compose Path to `./docker-compose.yml`. The existing `compose.yaml` is the optional combined stack with managed MySQL/Redis and the sibling frontend checkout; do not use it for independent deployments. Do not add `compose.dokploy.yaml` to these independent files.
+Use a separate Compose application for each repository. In **both**, set Compose Path to `./docker-compose.yml`. The backend `compose.yaml` is an optional backend-only stack with managed MySQL/Redis; no Compose file in this repository builds the frontend. Do not add `compose.dokploy.yaml` to the independent `docker-compose.yml`.
 
 ## Backend
 

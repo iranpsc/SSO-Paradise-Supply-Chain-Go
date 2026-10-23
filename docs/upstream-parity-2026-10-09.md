@@ -24,7 +24,7 @@ Source: Laravel `368600f..6c0e18c` (36 changed files). Target: Go backend and in
 
 ## Deployment details
 
-Run `docker compose --env-file deploy/production.env up --build -d`; add `-f compose.yaml -f compose.dokploy.yaml` for Dokploy. Supply REDIS_PASSWORD and PUBLIC_URL in the environment file; PUBLIC_URL is also passed into the frontend build.
+Run `docker compose --env-file deploy/production.env -f compose.yaml up --build -d`; add `-f compose.dokploy.yaml` for the managed-database Dokploy topology. Supply REDIS_PASSWORD and PUBLIC_URL in the environment file. The Compose files now start backend services only; deploy the frontend from its own repository.
 
 Migration 10 records `oauth_clients.first_party`. Ownership was not retained by older Go imports, so existing clients initially require consent. After verifying source ownership, operators can set first_party=1 only for internal clients. New administrator-created clients are internal; new imports preserve the source user_id/owner_id distinction. Public clients always require consent, even when internal.
 
