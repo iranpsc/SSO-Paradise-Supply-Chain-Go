@@ -11,6 +11,7 @@ Go-based identity and single sign-on service, designed to interoperate with the 
 - [Requirements](#requirements)
 - [Local setup](#local-setup)
 - [Configuration and secrets](#configuration-and-secrets)
+- [API documentation](#api-documentation)
 - [Testing and quality checks](#testing-and-quality-checks)
 - [Laravel migration](#laravel-migration)
 - [Deployment and operations](#deployment-and-operations)
@@ -102,6 +103,27 @@ go run ./cmd/worker
 ```
 
 Do not log passwords, session cookies, bearer tokens, refresh tokens, private keys, wallet signatures, personal documents, or full connection strings.
+
+## API documentation
+
+Opening the Go backend's root URL displays Swagger UI, not the separate Next.js
+frontend. `/swagger/` is an alias and `/openapi.json` serves the OpenAPI 3.0.3
+document. For example, after deployment open
+`https://apidevgo-accounts.irpsc.com/`.
+
+The catalog is collected from the actual registered HTTP methods and paths,
+including JSON account APIs, OAuth, wallets, media, health and Laravel browser
+compatibility endpoints. Redirect-only frontend pages are excluded. Descriptions,
+request fields and authentication notes are maintained in
+`internal/transport/httpapi/openapi_operations.json`. Adding a registered API
+automatically adds its route to the catalog; update its metadata when adding or
+changing request fields. Device-code routes are explicitly documented as disabled
+compatibility behavior, not supported grants.
+
+Swagger UI 5.34.0 and its assets are embedded in the Go binary; no CDN or Node.js
+build is required. The viewer is documentation-only: request execution is disabled
+and no credentials are persisted. Existing session, origin, CSRF and OAuth rules
+remain enforced by the API. Health checks remain at `/healthz` and `/readyz`.
 
 ## Testing and quality checks
 

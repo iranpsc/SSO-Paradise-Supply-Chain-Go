@@ -49,7 +49,7 @@ func (c *contractResponse) flush(w http.ResponseWriter) {
 	_, _ = w.Write(c.body.Bytes())
 }
 
-func (s *Server) registerLegacyRoutes(m *http.ServeMux) {
+func (s *Server) registerLegacyRoutes(m *documentedMux) {
 	s.registerDeviceRoutes(m)
 	m.HandleFunc("GET /sanctum/csrf-cookie", s.csrfCookie)
 	m.HandleFunc("GET /api/legacy/flash", s.readFlash)
@@ -74,7 +74,7 @@ func (s *Server) registerLegacyRoutes(m *http.ServeMux) {
 	// are for callers accessing the API server directly.
 	for _, page := range []string{"/home", "/account", "/account/edit", "/personal-info", "/personal-info/edit", "/change-password", "/password/confirm", "/email/verify", "/login", "/register", "/password/reset"} {
 		path := page
-		m.HandleFunc("GET "+path, func(w http.ResponseWriter, r *http.Request) {
+		m.ServeMux.HandleFunc("GET "+path, func(w http.ResponseWriter, r *http.Request) {
 			protected := path != "/login" && path != "/register" && path != "/password/reset"
 			verified := path == "/home" || strings.HasPrefix(path, "/account") || strings.HasPrefix(path, "/personal-info") || path == "/change-password"
 			if protected && !s.legacyGuard(w, r, verified) {
@@ -89,9 +89,8 @@ func (s *Server) registerLegacyRoutes(m *http.ServeMux) {
 			http.Redirect(w, r, s.origin+r.URL.RequestURI(), 302)
 		})
 	}
-	m.HandleFunc("GET /password/reset/{token}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, s.origin+r.URL.RequestURI(), 302) })
+	m.ServeMux.HandleFunc("GET /password/reset/{token}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, s.origin+r.URL.RequestURI(), 302) })
 	m.HandleFunc("GET /up", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })
-	m.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) { http.Redirect(w, r, s.origin+"/home", 302) })
 }
 
 func (s *Server) passportWeb(next func(http.ResponseWriter, *http.Request, domain.User)) http.HandlerFunc {

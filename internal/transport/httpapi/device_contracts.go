@@ -10,7 +10,7 @@ import (
 // The inspected Laravel app registers these headless Passport routes, but
 // its legacy client model advertises no device_code grant and registers no
 // device views. Preserve that configuration rather than inventing clients.
-func (s *Server) registerDeviceRoutes(m *http.ServeMux) {
+func (s *Server) registerDeviceRoutes(m *documentedMux) {
 	m.HandleFunc("GET /oauth/device", func(w http.ResponseWriter, r *http.Request) {
 		if code := r.URL.Query().Get("user_code"); code != "" {
 			http.Redirect(w, r, s.origin+"/oauth/device/authorize?"+url.Values{"user_code": {code}}.Encode(), 302)
