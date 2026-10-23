@@ -53,6 +53,8 @@ services:
       MYSQL_HOST: mysql
       REDIS_ADDR: redis:6379
       OAUTH_PRIVATE_KEY_PATH: /run/sso-secrets/oauth-private.key
+    ports:
+      - 127.0.0.1:8080:8080
     volumes:
       - ./deploy/secrets:/run/sso-secrets:ro
     depends_on:
@@ -83,21 +85,6 @@ services:
       mysql:
         condition: service_healthy
       redis:
-        condition: service_healthy
-  web:
-    build:
-      context: ../SSO-Paradise-Supply-Chain-Go-Front
-      dockerfile: Dockerfile
-      args:
-        NPM_CONFIG_REGISTRY: ${NPM_CONFIG_REGISTRY:-https://registry.npmjs.org/}
-        API_ORIGIN: http://api:8080
-        PUBLIC_URL: ${PUBLIC_URL:?Set PUBLIC_URL}
-        NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:?Set WalletConnect project ID}
-    restart: unless-stopped
-    ports:
-      - 127.0.0.1:3000:3000
-    depends_on:
-      api:
         condition: service_healthy
 volumes:
   mysql_data:

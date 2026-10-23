@@ -15,15 +15,12 @@ go run ./cmd/migrate
 go run ./cmd/api
 # In a second terminal, from the same directory:
 go run ./cmd/worker
-# In a third terminal:
-cd ../SSO-Paradise-Supply-Chain-Go-Front
-npm run dev
 ```
 
 The frontend is at `http://localhost:3000`; API database readiness is at `http://127.0.0.1:8080/readyz`. Background process IDs from the assisted local launch are recorded in `var/local-processes.json`; logs are in `var/*.log`.
 
 The local source snapshot inspected during setup contained zero users, profiles, wallets and OAuth clients. Import completed without creating artificial account data; 17 guest/expired/stale session files were skipped. This does not describe production data. Register a local account to exercise the actual account flow, and open the generated verification/reset files under `var/mail`.
 
-The CI workflow provisions MySQL 8.4 separately for the Go and browser jobs. `MYSQL_HOST` is set explicitly so database tests execute instead of skipping. Go race tests, vet, all runtime command builds, frontend type/build checks and Playwright run against temporary databases with test-only credentials.
+The backend CI workflow provisions MySQL 8.4 for Go tests. `MYSQL_HOST` is set explicitly so database tests execute instead of skipping. Go race tests, vet and runtime command builds run in backend CI against temporary databases with test-only credentials. The independent frontend repository owns browser jobs.
 
-For automatic production pulls, keep the server's populated Go `.env` outside Git, or inject equivalent service/CI variables. Set `PUBLIC_URL=https://accounts.irpsc.com`, the exact source APP_KEY, a readable Laravel RSA key path, target MySQL credentials and queued TLS SMTP settings. Do not copy `sso` into `MYSQL_DATABASE`: its Laravel tables are the import source. Build Next with the production `API_ORIGIN` and WalletConnect project ID. Restart API, worker and web after the checked build. Git pull alone does not migrate data, build Next or restart processes; use the production runbook for the final cutover. The workflow added here performs checks, and does not modify the production server.
+For automatic production pulls, keep the server's populated Go `.env` outside Git, or inject equivalent service/CI variables. Set `PUBLIC_URL` to the public frontend origin, the exact source APP_KEY, a readable Laravel RSA key path, target MySQL credentials and queued TLS SMTP settings. Do not copy `sso` into `MYSQL_DATABASE`: its Laravel tables are the import source. Deploy the frontend from its own repository. Restart API and worker after the checked backend build. Git pull alone does not migrate data, build binaries or restart processes; use the production runbook for the final cutover. The workflow performs checks and does not modify the production server.

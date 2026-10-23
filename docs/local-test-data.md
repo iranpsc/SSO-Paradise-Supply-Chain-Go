@@ -1,4 +1,4 @@
-# Manual frontend test data
+# Local backend seed data
 
 From the project root, with the local WAMP `.env` loaded:
 

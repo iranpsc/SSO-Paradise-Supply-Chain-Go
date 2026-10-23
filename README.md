@@ -1,6 +1,6 @@
-# SSO Paradise Supply Chain — Go / Next.js
+# SSO Paradise Supply Chain — Go backend
 
-Go implementation of the sibling Laravel SSO, with MySQL persistence and optional Redis caching. The Persian RTL Next.js interface lives in the independent [frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front); clone it alongside this repository for local development and Compose builds.
+Go implementation of the sibling Laravel SSO, with MySQL persistence and optional Redis caching. The Persian RTL Next.js interface lives in the independent [frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front) and is built and deployed separately. No Node.js installation or frontend checkout is needed to build, test or deploy this backend.
 
 Implemented flows include registration and email/username login, remember-me, password confirmation/reset/change, Laravel-compatible signed email verification, account/profile editing, private documents and avatars, MetaMask/WalletConnect login and wallet linking, OAuth authorization code/PKCE, rotating refresh tokens, revocation, registration callbacks and unverified-account cleanup.
 
@@ -8,7 +8,7 @@ OAuth follows the custom Laravel client policy: only confidential first-party cl
 
 ## Run locally
 
-Requirements: Go (version in go.mod), Node.js 22.12+, MySQL 8.0.13+ or 9.x; Redis is optional. Integration tests have been run against local MySQL 9.1. Go automatically loads .env from the working directory. Existing process/CI variables take precedence; ENV_FILE selects an explicit file and fails if it is unavailable. Use [.env.example](.env.example) and [../SSO-Paradise-Supply-Chain-Go-Front/.env.example](../SSO-Paradise-Supply-Chain-Go-Front/.env.example) as configuration references.
+Requirements: Go (version in go.mod), MySQL 8.0.13+ or 9.x; Redis is optional. Integration tests have been run against local MySQL 9.1. Go automatically loads .env from the working directory. Existing process/CI variables take precedence; ENV_FILE selects an explicit file and fails if it is unavailable. Use [.env.example](.env.example) as the backend configuration reference.
 
 From this project root, select a **separate Go database**, then create/migrate it:
 
@@ -19,17 +19,9 @@ go run ./cmd/migrate
 go run ./cmd/api
 ```
 
-In a second terminal:
+API health: http://127.0.0.1:8080/healthz; database readiness: http://127.0.0.1:8080/readyz. PUBLIC_URL must match the browser-facing origin of the independently deployed frontend. Follow the frontend repository's instructions for its setup.
 
-```powershell
-cd ../SSO-Paradise-Supply-Chain-Go-Front
-npm ci
-npm run dev
-```
-
-Open http://localhost:3000/login. API health: http://127.0.0.1:8080/healthz. PUBLIC_URL must match the browser origin. Copy ../SSO-Paradise-Supply-Chain-Go-Front/.env.example to ../SSO-Paradise-Supply-Chain-Go-Front/.env.local for WalletConnect configuration.
-
-Development email is written to var/mail. MAIL_MAILER=smtp selects SMTP. Without supplied keys, development creates persistent var/app.key and var/oauth-private.key. Keep these stable between restarts. Production/staging startup validates HTTPS, stable keys and TLS SMTP. SMTP is durably queued by default; run `go run ./cmd/worker` alongside the API. See the [production runbook](docs/production.md).
+Development email is written to var/mail. MAIL_MAILER=smtp selects SMTP. Without supplied keys, development creates persistent var/app.key and var/oauth-private.key. Keep these stable between restarts. Production/staging startup validates HTTPS (unless explicitly enabled with ALLOW_INSECURE_HTTP=true), stable keys and TLS SMTP. SMTP is durably queued by default; run `go run ./cmd/worker` alongside the API. See the [production runbook](docs/production.md).
 
 ## Database and import
 
@@ -44,14 +36,9 @@ $env:MYSQL_HOST = '127.0.0.1'
 go test ./...
 go vet ./...
 go build -o bin/sso-paradise-supply-chain.exe ./cmd/api
-cd ../SSO-Paradise-Supply-Chain-Go-Front
-npm run typecheck
-npm run build
-$env:PLAYWRIGHT_CHANNEL = 'chrome'
-npm test
 ```
 
-Go database tests use random disposable paradise_test_* databases. Browser tests create a dedicated paradise_e2e_* database and synthetic mail/key files; teardown deletes only that test database. Tests cover migration/import preservation, concurrent nonce consumption, OAuth/PKCE/refresh replay, JWT/Defuse/cookie interoperability against actual Laravel dependencies, cache revocation/password freshness, signed verification, queue leases/retries, shared throttling and account/wallet browser flows. Browser layout checks cover 390, 768 and 1440 pixels.
+Go database tests use random disposable paradise_test_* databases. Tests cover migration/import preservation, concurrent nonce consumption, OAuth/PKCE/refresh replay, JWT/Defuse/cookie interoperability against actual Laravel dependencies, cache revocation/password freshness, signed verification, queue leases/retries and shared throttling. The independent frontend repository owns browser tests, including account/wallet flows and responsive layout checks.
 
 ## Layout
 
@@ -63,10 +50,10 @@ Go database tests use random disposable paradise_test_* databases. Browser tests
 - internal/domain, application: business rules and interfaces.
 - internal/infrastructure: MySQL, optional Redis, crypto, SMTP/file mail and Metarang.
 - internal/transport/httpapi: HTTP contracts, cookies and rate limits.
-- ../SSO-Paradise-Supply-Chain-Go-Front/src: Next.js pages and Persian forms, wallet providers and same-origin API rewrites.
+- Dockerfile and Compose files: backend binaries, optional managed MySQL/Redis and API proxy configuration; no frontend service.
 
 MySQL is authoritative for session expiry, revocation and credentials even when Redis is available. Cookie-based browser mutations require the configured origin. Tokens are not persisted in browser localStorage.
 
 [Local WAMP and CI setup](docs/local-wamp.md) documents dotenv precedence, the separate `sso_go` target, local mail files and production configuration during automatic pulls.
 
-[Frontend test data](docs/frontend-test-data.md) explains `cmd/seed-local`, the five demo accounts and five importable wallet scenarios. Populated credentials are stored only under Git-ignored `var/test-data`.
+[Local backend test data](docs/local-test-data.md) explains `cmd/seed-local`, the five demo accounts and five importable wallet scenarios. Populated credentials are stored only under Git-ignored `var/test-data`.

@@ -2,38 +2,30 @@
 
 ## Configuration
 
-The API now accepts APP_ENV=production or staging. Startup rejects a non-HTTPS PUBLIC_URL, absent/invalid 32-byte APP_KEY, missing OAUTH_PRIVATE_KEY_PATH, plaintext SMTP, or synchronous production mail. It never creates production signing keys. Development still generates persistent local keys and can write notices to files.
+The API accepts APP_ENV=production or staging. Startup rejects a non-HTTPS PUBLIC_URL unless ALLOW_INSECURE_HTTP=true, absent/invalid 32-byte APP_KEY, missing OAUTH_PRIVATE_KEY_PATH, plaintext SMTP, or synchronous production mail. It never creates production signing keys. Development still generates persistent local keys and can write notices to files.
 
-Copy deploy/production.env.example to a private deploy/production.env and replace placeholders. Reuse the **literal Laravel APP_KEY** and a securely provisioned copy of Laravel's RSA private key for compatible existing tokens, signed links and cookies. Do not rotate those keys during cutover. Provision SMTP credentials, the public WalletConnect project ID, and the public HTTPS origin. A copied key should be readable only by the application OS user (container uid 10001). Never commit production.env or deploy/secrets.
+Copy deploy/production.env.example to a private deploy/production.env and replace placeholders. Reuse the **literal Laravel APP_KEY** and a securely provisioned copy of Laravel's RSA private key for compatible existing tokens, signed links and cookies. Do not rotate those keys during cutover. Provision SMTP credentials and set PUBLIC_URL to the independently deployed frontend origin. A copied key should be readable only by the application OS user (container uid 10001). Never commit production.env or deploy/secrets.
 
-Go binaries load .env from the working directory without replacing existing process variables. ENV_FILE selects an explicit configuration file; a missing explicit file fails startup. Container env_file and CI/service-manager variables take precedence over the local file. On Windows/Linux without containers, inject the same variables through the service manager and supervise all three processes:
+Go binaries load .env from the working directory without replacing existing process variables. ENV_FILE selects an explicit configuration file; a missing explicit file fails startup. Container env_file and CI/service-manager variables take precedence over the local file. On Windows/Linux without containers, inject the same variables through the service manager and supervise the API and worker:
 
 ```powershell
 go build -o bin/api.exe ./cmd/api
 go build -o bin/worker.exe ./cmd/worker
-cd ../SSO-Paradise-Supply-Chain-Go-Front
-npm ci
-npm run build
-npm run start
 ```
 
-Run bin/api.exe and bin/worker.exe from the Go project root in separate managed services. Set API_ORIGIN for Next **before building**, because rewrites are compiled into its build. Backend default listen is loopback 127.0.0.1:8080. Next standalone output is also available; include .next/static and public with .next/standalone when deploying it manually.
+Run bin/api.exe and bin/worker.exe from the Go project root in separate managed services. Backend default listen is loopback 127.0.0.1:8080. Build and deploy the frontend using its own repository; backend deployment does not build or start Next.js.
 
 ## Container files
 
-For **independent Dokploy applications**, use `docker-compose.yml` in each repository and follow [the Dokploy runbook](dokploy.md). The `compose.yaml` described below remains the combined stack for local/manual operation and requires a sibling frontend checkout.
+For **independent Dokploy applications**, use `docker-compose.yml` in each repository and follow [the Dokploy runbook](dokploy.md). The `compose.yaml` described below is an optional backend-only stack with managed MySQL/Redis. It does not require a frontend checkout. `compose.dokploy.yaml` exposes its API to Dokploy instead of publishing a host port.
 
 ### Dependency downloads and build arguments
 
 The Go builder defaults to `GOPROXY=https://proxy.golang.org|https://goproxy.cn|direct`. Go's pipe separator retries the next source on HTTP 403 and other download failures; a comma only falls back on 404/410. Git is installed for direct VCS downloads. Checksum verification remains enabled. Override the public mirror with an approved reachable proxy using `docker build --build-arg GOPROXY=... .`, or set GOPROXY in the Compose interpolation env file. Runtime environment variables alone do not set Docker build arguments. All three Go services use the same build configuration. See https://go.dev/ref/mod#environment-variables.
 
-For Dokploy Dockerfile deployments, configure these as **build arguments** on the frontend: `API_ORIGIN=https://apidev-accounts.irpsc.com`, `PUBLIC_URL=https://dev-accounts.irpsc.com`, and `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` with your public project ID. Compose already forwards them (API_ORIGIN is its internal API service). `NPM_CONFIG_REGISTRY` optionally selects a reachable npm registry for the frontend build. The npm deprecation warning shown in the deployment log is not a build failure; that web build was canceled after the Go dependency download failed.
-
 For standalone backend containers, use `HTTP_ADDR=0.0.0.0:8080`. `127.0.0.1` for MYSQL_HOST or REDIS_ADDR reaches the container itself; use the actual database/cache service hostname instead. Mount the provisioned OAuth private key and set OAUTH_PRIVATE_KEY_PATH to its path inside the container. The supplied Compose file overrides those addresses and key path, but requires a nonempty REDIS_PASSWORD and MYSQL_ROOT_PASSWORD for its managed services. Match TRUSTED_PROXY_CIDRS to the actual reverse proxy's container/network address. Do not pass APP_KEY, database passwords, SMTP passwords or the private key as build arguments.
 
-Dockerfile builds the API, worker, migrate/import/manage commands. ../SSO-Paradise-Supply-Chain-Go-Front/Dockerfile packages Next standalone. compose.yaml starts isolated MySQL/Redis, API, worker and web, with durable database storage and restart policies. Only web's port is exposed on host loopback; use your existing HTTPS reverse proxy. deploy/nginx.conf.example overwrites forwarded IP headers and permits the validated image-upload size. Adapt its domain/certificate paths to your server.
-
-Docker is unavailable in the current workspace; image builds/Compose startup have **not** been verified here. Native Go and Next builds and browser/database tests are the verified path. Validate these container definitions on the deployment host before using them.
+Dockerfile builds the API, worker, migrate/import/manage commands. compose.yaml starts isolated MySQL/Redis, API and worker, with durable database storage and restart policies. Only the API's port 8080 is published on host loopback; use your existing reverse proxy. deploy/nginx.conf.example proxies the API, overwrites forwarded IP headers and permits the validated image-upload size. Adapt its API hostname and certificate paths to your server. The independent docker-compose.yml uses external MySQL/Redis and Dokploy networking instead.
 
 ```powershell
 docker compose --env-file deploy/production.env config --quiet
@@ -49,7 +41,7 @@ Then perform schema/import/cutover below before starting the API, which lazily c
 2. Create/migrate a separate empty Go target with go run ./cmd/migrate. Do not point this at the Laravel database. Source database privileges should be read-only.
 3. Run the import dry run with LARAVEL_MYSQL_DSN and the source media root. If retaining browser sessions, also provide --sessions-root, the exact APP_KEY, and source --session-lifetime (default 2h). Review counts, rejected values and skipped expired/guest/stale-password sessions.
 4. Apply using the same flags plus --apply. The target data commits atomically; source tables/files are never changed. Source signing/cookie keys and original public origin must match.
-5. Start API, worker and the built web server; switch the HTTPS reverse proxy when the checks below succeed. In Compose: docker compose --env-file deploy/production.env up -d api worker web.
+5. Start API and worker; switch the API reverse proxy when the checks below succeed. In Compose: docker compose --env-file deploy/production.env up -d api worker. Deploy the frontend separately and align its API destination with the reachable backend origin.
 6. Exercise registration/verification, real SMTP delivery, login/logout, wallet signing and authorization/refresh/revocation with each actual client. Confirm the client still validates JWTs using the same RSA public key. Check /readyz directly on the private API and worker logs.
 
 For import/manage inside the container, run one-off API-image commands with the required read-only source filesystem mounts and source DSN. Compose's default MYSQL_HOST=mysql is the **target**; configure LARAVEL_MYSQL_DSN to reach the separate source. Do not copy secrets into a built image.
