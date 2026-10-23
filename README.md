@@ -1,6 +1,6 @@
 # Paradise Supply Chain SSO — Go Backend
 
-Go-based identity and single sign-on service, designed to interoperate with the sibling Laravel SSO and its Passport conventions. The Persian RTL user interface is maintained separately in [SSO-Paradise-Supply-Chain-Go-Front](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front).
+Go-based identity and single sign-on service, designed to interoperate with the sibling Laravel SSO and its Passport conventions. The Persian RTL user interface is maintained separately in [SSO-Paradise-Supply-Chain-Go-Front](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front). No Node.js installation or frontend checkout is needed to build, test or deploy this backend.
 
 > **Security:** This is a public source repository, not a place to publish credentials, production configuration, customer records, private signing keys, or vulnerability details. See [SECURITY.md](SECURITY.md).
 
@@ -51,7 +51,7 @@ The Go backend owns authentication, token issuance, revocation, persistence, and
 - Go: use the version specified in [`go.mod`](go.mod).
 - MySQL 8.0.13+ or 9.x; use a dedicated database for this service.
 - Redis is optional.
-- Node.js 22.12+ and the sibling frontend are required for the complete browser experience and frontend test suite.
+- The independent frontend has its own Node.js requirements and browser test suite; see its repository for setup.
 - An SMTP service is required when configuring SMTP delivery; development can use file mail.
 
 ## Local setup
@@ -85,14 +85,7 @@ go run ./cmd/migrate
 go run ./cmd/api
 ```
 
-Start the frontend in a separate terminal:
-
-```bash
-cd ../SSO-Paradise-Supply-Chain-Go-Front
-cp .env.example .env.local # PowerShell: Copy-Item .env.example .env.local
-npm ci
-npm run dev
-```
+Set up and deploy the frontend separately using its repository's instructions.
 
 The documented development defaults are `http://localhost:3000/login` for the frontend and `http://127.0.0.1:8080/healthz` for the API. `PUBLIC_URL` must match the browser origin; use the examples in both repositories as references and resolve any conflicting sample values before testing cookies and callbacks. Configure WalletConnect in the frontend environment when needed.
 
@@ -102,7 +95,7 @@ For local development, mail is written to `var/mail` by default. If keys are not
 
 Use [`.env.example`](.env.example) as the authoritative list of supported settings; do not copy real values into documentation or PRs. Configure distinct database identities and signing material for local, test, staging, and production environments. Limit database permissions, protect backups, and provide production secrets through the deployment platform's secret-management mechanism. Cookie-based browser mutations require the configured origin.
 
-Production/staging startup validates HTTPS, stable keys, and TLS SMTP. When `MAIL_MAILER=smtp`, run the worker alongside the API:
+Production/staging startup validates HTTPS by default (HTTP requires explicit `ALLOW_INSECURE_HTTP=true`), stable keys, and TLS SMTP. `PUBLIC_URL` must match the browser-facing frontend origin. When `MAIL_MAILER=smtp`, run the worker alongside the API:
 
 ```bash
 go run ./cmd/worker
@@ -120,16 +113,7 @@ go vet ./...
 go build ./cmd/api
 ```
 
-For frontend/browser validation, from the sibling frontend directory:
-
-```bash
-npm ci
-npm run typecheck
-npm run build
-npm test
-```
-
-Follow the frontend's Playwright setup; `PLAYWRIGHT_CHANNEL=chrome` may be used when appropriate. Existing documented coverage includes migration/import preservation, concurrent nonce use, PKCE/refresh replay, JWT and Laravel compatibility, cookie interoperability, revocation, password freshness, signed verification, mail queue retries, throttling, and account/wallet browser flows. Add regression tests for every changed security-sensitive behavior. A passing test suite does not replace a security review.
+Frontend/browser validation is maintained in the [independent frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front); follow its setup and Playwright instructions. Existing documented coverage includes migration/import preservation, concurrent nonce use, PKCE/refresh replay, JWT and Laravel compatibility, cookie interoperability, revocation, password freshness, signed verification, mail queue retries, throttling, and account/wallet browser flows. Add regression tests for every changed security-sensitive behavior. A passing test suite does not replace a security review.
 
 ## Laravel migration
 
@@ -137,7 +121,7 @@ Read [`docs/migration.md`](docs/migration.md) **before** importing. The document
 
 ## Deployment and operations
 
-Deployment assets include `Dockerfile`, `compose.yaml`, `docker-compose.yml`, `compose.dokploy.yaml`, and `deploy/`. They are alternatives/configurations to inspect, not instructions to run every Compose file together. Use [`docs/production.md`](docs/production.md) as the deployment runbook. Ensure that API and worker processes receive the required configuration, migrations are controlled, HTTPS and SMTP/TLS are configured, persistent keys are securely provisioned, and health checks, backups, log redaction, monitoring, and rollback are addressed. Test the deployment in staging before production.
+Deployment assets include `Dockerfile`, `compose.yaml`, `docker-compose.yml`, `compose.dokploy.yaml`, and `deploy/`. They are alternatives/configurations to inspect, not instructions to run every Compose file together. All Compose files here deploy backend services only. Use `docker-compose.yml` for an independent Dokploy backend with external MySQL/Redis, or `compose.yaml` for a backend stack with managed MySQL/Redis. Its optional `compose.dokploy.yaml` override exposes the API on port 8080 to Dokploy. Build and deploy the frontend from its own repository. Use [`docs/production.md`](docs/production.md) as the deployment runbook. Ensure that API and worker processes receive the required configuration, migrations are controlled, the selected HTTPS or explicitly enabled HTTP mode matches the proxy configuration, SMTP/TLS is configured, persistent keys are securely provisioned, and health checks, backups, log redaction, monitoring, and rollback are addressed. Test the deployment in staging before production.
 
 ## Documentation
 
@@ -146,7 +130,7 @@ Deployment assets include `Dockerfile`, `compose.yaml`, `docker-compose.yml`, `c
 - [Laravel migration and compatibility](docs/migration.md)
 - [Feature parity audit](docs/feature-parity.md)
 - [Local WAMP and CI setup](docs/local-wamp.md)
-- [Synthetic frontend test data](docs/frontend-test-data.md)
+- [Local backend seed data](docs/local-test-data.md)
 - [Postman collection](postman_collection.json) — inspect its environment/credentials before use
 - [Frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front)
 

@@ -20,14 +20,9 @@ go.work.sum
 .DS_Store
 Thumbs.db
 
-# Runtime data and frontend build output
-# Unanchored so nested runtimes (e.g. web/var/app.key) are excluded too.
+# Runtime data (including keys and generated test credentials)
 var/
-node_modules/
-.next/
-out/
-*.tsbuildinfo
-playwright-report/
-test-results/
+# Retired embedded frontend: prevent local restores from adding it to Git.
+/web/
 /deploy/secrets/
 /deploy/production.env
