@@ -1,0 +1,1280 @@
+{
+  "GET /healthz": {
+    "summary": "Check process health",
+    "responses": {
+      "200": {
+        "description": "Process is running"
+      }
+    }
+  },
+  "POST /api/register": {
+    "summary": "Register",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "referral": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /api/login": {
+    "summary": "Login",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "login": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /api/logout": {
+    "summary": "Logout",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/password/email": {
+    "summary": "Forgot Password",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /api/password/reset": {
+    "summary": "Reset Password",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "GET /api/account": {
+    "summary": "Get Account",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/user": {
+    "summary": "Get User",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/me": {
+    "summary": "Get Me (Public Profile)",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "PUT /api/account": {
+    "summary": "Update Account",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "PUT /api/change-password": {
+    "summary": "Change Password",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "current_password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/email/verification-notification": {
+    "summary": "Resend Verification",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/email/verify": {
+    "summary": "Verify Email",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/personal-info": {
+    "summary": "Get Personal Info",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "PUT /api/personal-info": {
+    "summary": "Update Personal Info (JSON)",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "is_company": {
+                "type": "boolean"
+              },
+              "first_name": {
+                "type": "string"
+              },
+              "last_name": {
+                "type": "string"
+              },
+              "mobile": {
+                "type": "string"
+              },
+              "telephone": {
+                "type": "string"
+              },
+              "national_code": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "multipart/form-data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "is_company": {
+                "type": "string"
+              },
+              "first_name": {
+                "type": "string"
+              },
+              "last_name": {
+                "type": "string"
+              },
+              "mobile": {
+                "type": "string"
+              },
+              "telephone": {
+                "type": "string"
+              },
+              "national_code": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "melli_card_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "certificate_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "bank_card_scan": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/personal-info/documents/{kind}": {
+    "summary": "Get Document",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/account/avatar": {
+    "summary": "Get Own Avatar",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "PUT /api/account/avatar": {
+    "summary": "Update Avatar",
+    "requestBody": {
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "avatar": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/users/{user}/avatar": {
+    "summary": "Get Public Avatar"
+  },
+  "GET /api/web3/nonce": {
+    "summary": "Get wallet signing nonce",
+    "parameters": [
+      {
+        "name": "address",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "GET /api/web3/link/nonce": {
+    "summary": "Get authenticated wallet-link nonce",
+    "parameters": [
+      {
+        "name": "address",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/web3/verify": {
+    "summary": "POST /api/web3/verify",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /api/web3/link": {
+    "summary": "POST /api/web3/link",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /web3/nonce": {
+    "summary": "Get wallet signing nonce",
+    "parameters": [
+      {
+        "name": "address",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "GET /web3/link/nonce": {
+    "summary": "Get authenticated wallet-link nonce",
+    "parameters": [
+      {
+        "name": "address",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "POST /web3/verify": {
+    "summary": "POST /web3/verify",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /web3/link": {
+    "summary": "POST /web3/link",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "address": {
+                "type": "string"
+              },
+              "signature": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "GET /oauth/authorize": {
+    "summary": "Begin OAuth authorization-code flow",
+    "description": "Validates the registered client and exact redirect URI. Redirects to login/consent as needed. OAuth state and PKCE are retained.",
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "redirect_uri",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "response_type",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "scope",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "state",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "code_challenge",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "code_challenge_method",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "GET /api/oauth/authorize": {
+    "summary": "Begin OAuth authorization-code flow",
+    "description": "Validates the registered client and exact redirect URI. Redirects to login/consent as needed. OAuth state and PKCE are retained.",
+    "parameters": [
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "redirect_uri",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "response_type",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "scope",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "state",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "code_challenge",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "code_challenge_method",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "POST /oauth/token": {
+    "summary": "POST /oauth/token",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "grant_type": {
+                "type": "string"
+              },
+              "client_id": {
+                "type": "string"
+              },
+              "client_secret": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string"
+              },
+              "redirect_uri": {
+                "type": "string"
+              },
+              "code_verifier": {
+                "type": "string"
+              },
+              "refresh_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "Accepts authorization_code or refresh_token. Password grants are disabled. Confidential clients must supply their client secret or HTTP Basic credentials."
+  },
+  "POST /oauth/revoke": {
+    "summary": "POST /oauth/revoke",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "client_id": {
+                "type": "string"
+              },
+              "client_secret": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /api/oauth/consent": {
+    "summary": "POST /api/oauth/consent",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "auth_token": {
+                "type": "string"
+              },
+              "approve": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /api/password/confirm": {
+    "summary": "POST /api/password/confirm",
+    "requestBody": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "GET /api/oauth/consent": {
+    "summary": "Read pending session-bound OAuth consent request",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /oauth/authorize": {
+    "summary": "POST /oauth/authorize",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "auth_token": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "Requires the browser session and matching CSRF token; tokens are session-bound."
+  },
+  "DELETE /oauth/authorize": {
+    "summary": "DELETE /oauth/authorize",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "auth_token": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "Requires the browser session and matching CSRF token; tokens are session-bound."
+  },
+  "POST /api/oauth/authorize": {
+    "summary": "POST /api/oauth/authorize",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "auth_token": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "Requires the browser session and matching CSRF token; tokens are session-bound.",
+    "security": [
+      {
+        "bearerAuth": []
+      },
+      {
+        "sessionCookie": []
+      }
+    ]
+  },
+  "POST /oauth/token/refresh": {
+    "summary": "POST /oauth/token/refresh",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "auth_token": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "Requires the browser session and matching CSRF token; tokens are session-bound."
+  },
+  "POST /register": {
+    "summary": "Browser form: Register",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "username": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "referral": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /login": {
+    "summary": "Browser form: Login",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "login": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /password/email": {
+    "summary": "Browser form: Forgot Password",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /password/reset": {
+    "summary": "Browser form: Reset Password",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string"
+              },
+              "token": {
+                "type": "string"
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PUT /account": {
+    "summary": "Browser form: Update Account",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PATCH /account": {
+    "summary": "Browser form: Update Account",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PUT /personal-info": {
+    "summary": "Browser form: Update Personal Info (JSON)",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "is_company": {
+                "type": "string"
+              },
+              "first_name": {
+                "type": "string"
+              },
+              "last_name": {
+                "type": "string"
+              },
+              "mobile": {
+                "type": "string"
+              },
+              "telephone": {
+                "type": "string"
+              },
+              "national_code": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "melli_card_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "certificate_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "bank_card_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PATCH /personal-info": {
+    "summary": "Browser form: Update Personal Info (JSON)",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "is_company": {
+                "type": "string"
+              },
+              "first_name": {
+                "type": "string"
+              },
+              "last_name": {
+                "type": "string"
+              },
+              "mobile": {
+                "type": "string"
+              },
+              "telephone": {
+                "type": "string"
+              },
+              "national_code": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "melli_card_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "certificate_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "bank_card_scan": {
+                "type": "string",
+                "format": "binary"
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "PUT /change-password": {
+    "summary": "Browser form: Change Password",
+    "description": "Laravel browser compatibility endpoint. Origin, CSRF, session, verification and redirect behavior remain unchanged.",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "current_password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "password_confirmation": {
+                "type": "string",
+                "format": "password",
+                "writeOnly": true
+              },
+              "_token": {
+                "type": "string",
+                "description": "Session CSRF token"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /password/confirm": {
+    "summary": "POST /password/confirm",
+    "requestBody": {
+      "content": {
+        "application/x-www-form-urlencoded": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "password": {
+                "type": "string"
+              },
+              "_token": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "GET /readyz": {
+    "summary": "Check database readiness",
+    "responses": {
+      "200": {
+        "description": "Ready"
+      },
+      "503": {
+        "description": "Database unavailable"
+      }
+    }
+  },
+  "GET /up": {
+    "summary": "Laravel-compatible health check",
+    "responses": {
+      "200": {
+        "description": "Process is running"
+      }
+    }
+  },
+  "GET /sanctum/csrf-cookie": {
+    "summary": "Issue CSRF cookies",
+    "description": "Issues the signed CSRF cookies used by browser form compatibility requests.",
+    "responses": {
+      "204": {
+        "description": "CSRF cookies issued"
+      }
+    }
+  },
+  "GET /api/legacy/flash": {
+    "summary": "Read and consume browser flash messages"
+  },
+  "GET /storage/{media}/{filename}": {
+    "summary": "Read a legacy public avatar path"
+  },
+  "GET /email/verify/{id}/{hash}": {
+    "summary": "Follow a signed email-verification link",
+    "parameters": [
+      {
+        "name": "expires",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "signature",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ]
+  }
+}

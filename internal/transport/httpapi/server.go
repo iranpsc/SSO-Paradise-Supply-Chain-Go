@@ -47,7 +47,7 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	if shared, ok := auth.Accounts.(application.RateLimiter); ok {
 		s.sharedLimits = shared
 	}
-	m := http.NewServeMux()
+	m := newDocumentedMux()
 	m.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	m.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		if ready, ok := auth.Accounts.(interface{ Ready(context.Context) error }); ok {
@@ -100,7 +100,8 @@ func New(auth *application.Auth, web3 *application.Web3, profiles *application.P
 	m.HandleFunc("POST /oauth/revoke", s.oauthRevoke)
 	m.HandleFunc("POST /api/password/confirm", s.protected(false, s.confirmPassword))
 	s.registerLegacyRoutes(m)
-	return s.middleware(localizedRouting(m))
+	s.registerSwaggerRoutes(m)
+	return s.middleware(localizedRouting(m.ServeMux))
 }
 
 func respond(w http.ResponseWriter, status int, value any) {
