@@ -90,7 +90,8 @@ func TestPassportJWTLoginCallbackFlagConsumptionAndLogout(t *testing.T) {
 	}
 	query := url.Values{"client_id": {strconv.FormatInt(id, 10)}, "redirect_uri": {"https://client.example/callback"}, "response_type": {"code"}, "scope": {""}, "state": {"bound-state"}}
 	guest := do("GET", "/oauth/authorize?"+query.Encode(), "", "", nil, "")
-	if guest.Code != 302 || guest.Header().Get("Location") != a.PublicURL+"/login" {
+	expectedLogin := a.PublicURL + "/login?" + url.Values{"return_to": {"/oauth/authorize?" + query.Encode()}}.Encode()
+	if guest.Code != 302 || guest.Header().Get("Location") != expectedLogin {
 		t.Fatal("guest authorization redirect differs", guest.Code, guest.Header())
 	}
 	var flashCookie *http.Cookie

@@ -119,7 +119,8 @@ func main() {
 	query := url.Values{"client_id": {"38"}, "redirect_uri": {"https://dev-api.metarang.com/api/auth/callback"}, "response_type": {"code"}, "scope": {""}, "state": {"import-verification"}}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest("GET", "/oauth/authorize?"+query.Encode(), nil))
-	if w.Code != 302 || w.Header().Get("Location") != auth.PublicURL+"/login" {
+	expectedLogin := auth.PublicURL + "/login?" + url.Values{"return_to": {"/oauth/authorize?" + query.Encode()}}.Encode()
+	if w.Code != 302 || w.Header().Get("Location") != expectedLogin {
 		log.Fatalf("Client 38 guest authorization failed with HTTP %d", w.Code)
 	}
 	checks["client_38_guest_authorization_http"] = w.Code
