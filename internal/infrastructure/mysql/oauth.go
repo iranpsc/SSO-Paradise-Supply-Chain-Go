@@ -49,6 +49,45 @@ func (s *Store) OAuthClient(ctx context.Context, id int64) (application.OAuthCli
 	}
 	return c, rows.Err()
 }
+
+// HasGrantedOAuthScopes matches Passport's hasGrantedScopes: only active access
+// tokens for this user/client count, and their combined scopes cover the request.
+// An authorization code or an unexpired refresh token alone is not consent.
+func (s *Store) HasGrantedOAuthScopes(ctx context.Context, userID, clientID int64, scopes []string, now time.Time) (bool, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT gs.scope
+		FROM oauth_tokens t
+		JOIN oauth_grants g ON g.id=t.grant_id
+		JOIN oauth_clients c ON c.id=g.client_id
+		LEFT JOIN oauth_grant_scopes gs ON gs.grant_id=g.id
+		WHERE g.user_id=? AND g.client_id=? AND g.revoked_at IS NULL
+		AND c.revoked=0 AND t.access_expires_at>? AND t.consumed_at IS NULL`, userID, clientID, stamp(now))
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	found := false
+	granted := make(map[string]bool)
+	for rows.Next() {
+		var scope sql.NullString
+		if err := rows.Scan(&scope); err != nil {
+			return false, err
+		}
+		found = true
+		if scope.Valid {
+			granted[scope.String] = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return false, err
+	}
+	for _, scope := range scopes {
+		if !granted[scope] {
+			return false, nil
+		}
+	}
+	return found, nil
+}
+
 func (s *Store) CreateOAuthClient(ctx context.Context, name, hash string, redirects []string) (int64, error) {
 	if len(name) == 0 || len([]rune(name)) > 255 || len(redirects) == 0 {
 		return 0, application.OAuthInvalidRequest

@@ -83,6 +83,7 @@ type OAuthRepository interface {
 	PersonalOAuthClient(context.Context) (int64, error)
 	IssuePersonalOAuthToken(context.Context, int64, int64, TokenPair) (GrantIdentity, error)
 	OAuthClient(context.Context, int64) (OAuthClient, error)
+	HasGrantedOAuthScopes(context.Context, int64, int64, []string, time.Time) (bool, error)
 	SaveOAuthCode(context.Context, OAuthCode) error
 	ExchangeOAuthCode(context.Context, string, int64, string, string, TokenPair, time.Time) (GrantIdentity, error)
 	RotateOAuthRefresh(context.Context, string, int64, TokenPair, time.Time) (GrantIdentity, error)

@@ -22,7 +22,9 @@ Go-based identity and single sign-on service, designed to interoperate with the 
 
 - Registration; email/username login; remember-me; password confirmation, reset, and change; signed email verification; account and profile management; private avatars and documents.
 - MetaMask/WalletConnect sign-in and wallet linking.
-- OAuth authorization-code flow with PKCE, consent handling, RS256 JWT interoperability, refresh-token rotation, and revocation. The password grant is disabled. Only confidential first-party clients bypass consent under the project's custom client policy.
+- OAuth authorization-code flow with PKCE, consent handling, RS256 JWT interoperability, refresh-token rotation, and revocation. The password grant is disabled. As in Laravel Passport, consent is skipped for confidential first-party clients or when this user has active access tokens for this client covering the requested scopes. `prompt=consent` forces confirmation. Expired, revoked or rotated access tokens and authorization codes alone do not qualify.
+  Guest authorization redirects carry a local `/oauth/authorize` request in the login `return_to` query so separate backend/frontend domains preserve the callback, state and PKCE parameters. The frontend resumes authorization through its same-origin proxy after login; registered callback validation and consent still apply.
+  When a browser already has an authenticated session, `POST /api/login` returns a JSON success response without replacing that session; the frontend reads `/api/account` and resumes its pending destination. The legacy `POST /login` form retains its redirect to `/home`.
 - MySQL-backed credentials, sessions, expiration, and revocation, with optional Redis caching.
 - Laravel compatibility and controlled import of supported Passport, password-reset, session, and remember-cookie records; consult the migration guide for exact limitations.
 - File-based development mail or SMTP with a durable worker and retries.

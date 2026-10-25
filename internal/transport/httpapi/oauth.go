@@ -78,14 +78,32 @@ func (s *Server) oauthConsent(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if r.URL.Path == "/oauth/authorize" {
 			s.flashErrors(w, mustJSON(map[string]string{"intended": r.URL.RequestURI()}))
-			http.Redirect(w, r, s.origin+"/login", http.StatusFound)
+			// A host-only API flash cookie is not sent to the separate frontend.
+			// Carry the validated local authorization request across that redirect;
+			// the frontend resumes it through its same-origin OAuth proxy after login.
+			query := url.Values{"return_to": {r.URL.RequestURI()}}
+			http.Redirect(w, r, s.origin+"/login?"+query.Encode(), http.StatusFound)
 		} else {
 			s.fail(w, err)
 		}
 		return
 	}
 	if r.URL.Path == "/oauth/authorize" {
-		if !client.SkipsAuthorization() || r.URL.Query().Get("prompt") == "consent" {
+		forceConsent := false
+		for _, prompt := range strings.Fields(r.URL.Query().Get("prompt")) {
+			if prompt == "consent" {
+				forceConsent = true
+			}
+		}
+		skipConsent := client.SkipsAuthorization()
+		if !forceConsent && !skipConsent {
+			skipConsent, err = s.auth.OAuth.Store.HasGrantedOAuthScopes(r.Context(), u.ID, client.ID, scopes, s.auth.OAuth.Now())
+			if err != nil {
+				s.fail(w, err)
+				return
+			}
+		}
+		if forceConsent || !skipConsent {
 			if err := s.storeConsent(r, in); err != nil {
 				s.fail(w, err)
 				return
