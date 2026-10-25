@@ -114,7 +114,14 @@ func inputString(in map[string]any, key string) string { v, _ := in[key].(string
 
 func (s *Server) loginInput(w http.ResponseWriter, r *http.Request) (string, string, bool, bool) {
 	if _, err := s.authenticate(r, w); err == nil {
-		http.Redirect(w, r, s.origin+"/home", 302)
+		if r.URL.Path == "/api/login" {
+			// An existing browser session already authenticates this request. The
+			// separate frontend needs JSON so it can resume its pending OAuth URL;
+			// fetching an HTML /home redirect looks like a network failure to it.
+			respond(w, http.StatusOK, map[string]string{"message": "Login successful"})
+		} else {
+			http.Redirect(w, r, s.origin+"/home", http.StatusFound)
+		}
 		return "", "", false, false
 	}
 	in, ok := laravelInput(w, r)

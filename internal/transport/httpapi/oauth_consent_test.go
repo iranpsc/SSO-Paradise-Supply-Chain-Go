@@ -69,6 +69,11 @@ func TestOAuthConsentOwnershipApprovalDenialAndReplay(t *testing.T) {
 			if !strings.Contains(w.Header().Get("Location"), "code=") {
 				t.Fatal("internal client did not skip consent")
 			}
+			query.Set("prompt", "consent")
+			forced := request(h, "GET", "/oauth/authorize?"+query.Encode(), "", "", cookie)
+			if forced.Code != 302 || forced.Header().Get("Location") != a.PublicURL+"/authorize" {
+				t.Fatal("first-party client ignored forced consent")
+			}
 			continue
 		}
 		if w.Header().Get("Location") != a.PublicURL+"/authorize" {
