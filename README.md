@@ -7,6 +7,8 @@ Go-based identity and single sign-on service, designed to interoperate with the 
 ## Contents
 
 - [Capabilities](#capabilities)
+- [Technology stack and project boundaries](#technology-stack-and-project-boundaries)
+  - [What happens during an SSO login](#what-happens-during-an-sso-login)
 - [Architecture and repository layout](#architecture-and-repository-layout)
 - [Requirements](#requirements)
 - [Local setup](#local-setup)
@@ -30,6 +32,31 @@ Go-based identity and single sign-on service, designed to interoperate with the 
 - File-based development mail or SMTP with a durable worker and retries.
 
 These describe the repository's documented implementation, not a claim of third-party certification or a guarantee of deployment security.
+
+## Technology stack and project boundaries
+
+The backend is a standalone Go service. It does not contain or build the browser interface, and it does not require Node.js.
+
+| Area | Technology or responsibility |
+| --- | --- |
+| Runtime and HTTP | Go 1.25, Go modules, and the standard `net/http` server |
+| Persistent data | MySQL; versioned migrations create and upgrade the Go schema |
+| Optional cache | Redis for caching; database checks remain authoritative for credentials, sessions, and revocation |
+| Identity and tokens | Password hashing, browser sessions, RS256 JWTs, OAuth authorization codes, PKCE, refresh rotation, and revocation |
+| Mail | Local file delivery for development, or SMTP with a separate worker and durable queue |
+| API documentation | OpenAPI 3.0.3 and Swagger UI assets embedded in the Go executable |
+| Integrations | Wallet signature verification, Laravel-compatible contracts, and optional MetaRang lookup |
+
+The sibling [Next.js frontend](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front) presents the Persian, right-to-left browser experience. Other applications integrate with this backend through HTTP and OAuth contracts; they do not need to share its database. Keep the frontend and backend in separate checkouts and deploy them as separate services.
+
+### What happens during an SSO login
+
+1. A client application sends the browser to `/oauth/authorize` with its registered `client_id`, exact `redirect_uri`, requested scopes, an unpredictable `state`, and—when it is a public client—an S256 PKCE challenge.
+2. The backend validates the client, callback, and request. If the browser has no SSO session, it returns a login destination that preserves the pending authorization request across the independent frontend and API origins.
+3. After login, the frontend resumes the pending request. The backend applies its consent policy and issues a short-lived, single-use authorization code to the registered callback.
+4. The client exchanges that code at `/oauth/token`, presenting its verifier when PKCE applies. The backend issues the configured tokens; refresh-token rotation and revocation are enforced server-side.
+
+The application should validate `state` and complete the flow using its established OAuth library. A successful login to the identity provider does not itself create a local session in every client application; each client must validate the callback and establish its own session.
 
 ## Architecture and repository layout
 
@@ -127,6 +154,12 @@ build is required. The viewer is documentation-only: request execution is disabl
 and no credentials are persisted. Existing session, origin, CSRF and OAuth rules
 remain enforced by the API. Health checks remain at `/healthz` and `/readyz`.
 
+Useful entry points include `/api/account` for the authenticated account,
+`/oauth/authorize` and `/oauth/token` for OAuth, `/oauth/revoke` for token
+revocation, and `/healthz` and `/readyz` for process and dependency health. Consult
+the live OpenAPI document for exact methods, request shapes, response codes, and
+authentication requirements; do not infer an API contract from a UI route.
+
 ## Testing and quality checks
 
 Use an isolated, disposable MySQL instance and **verify its host/database before running integration or browser tests**. The documented Go tests create random `paradise_test_*` databases; browser tests use a dedicated `paradise_e2e_*` database with synthetic mail and keys. Never point test commands at a production database.
@@ -138,6 +171,13 @@ go build ./cmd/api
 ```
 
 Frontend/browser validation is maintained in the [independent frontend repository](https://github.com/iranpsc/SSO-Paradise-Supply-Chain-Go-Front); follow its setup and Playwright instructions. Existing documented coverage includes migration/import preservation, concurrent nonce use, PKCE/refresh replay, JWT and Laravel compatibility, cookie interoperability, revocation, password freshness, signed verification, mail queue retries, throttling, and account/wallet browser flows. Add regression tests for every changed security-sensitive behavior. A passing test suite does not replace a security review.
+
+GitHub Actions runs the race-enabled Go suite, `go vet`, and command builds for
+pushes and pull requests targeting `develop` or `main`. The frontend repository
+separately runs its browser suite against an isolated test database and a Go
+backend checkout. These checks report status to GitHub; repository branch rules
+must mark the relevant status checks as required if merges are to be blocked until
+they pass.
 
 ## Laravel migration
 
@@ -160,4 +200,4 @@ Deployment assets include `Dockerfile`, `compose.yaml`, `docker-compose.yml`, `c
 
 ## Contributing and security
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch, test, review, and PR requirements. Report suspected vulnerabilities **privately**, following [SECURITY.md](SECURITY.md); do not open a public security issue. Public repository visibility does not imply an open-source license: check for a separately published license before assuming reuse rights.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for branch, test, review, and PR requirements. Report suspected vulnerabilities **privately**, following [SECURITY.md](SECURITY.md); do not open a public security issue.
