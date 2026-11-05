@@ -110,6 +110,18 @@ func (a *Auth) Login(ctx context.Context, email, password string) (domain.User, 
 	return a.LoginRemember(ctx, email, password, false)
 }
 func (a *Auth) LoginRemember(ctx context.Context, email, password string, remember bool) (domain.User, string, error) {
+	u, err := a.AuthenticatePassword(ctx, email, password)
+	if err != nil {
+		return domain.User{}, "", err
+	}
+	ttl := a.SessionTTL
+	if remember {
+		ttl = a.RememberSessionTTL()
+	}
+	token, err := a.StartSessionFor(ctx, u.ID, ttl)
+	return u, token, err
+}
+func (a *Auth) AuthenticatePassword(ctx context.Context, email, password string) (domain.User, error) {
 	identifier := strings.ToLower(strings.TrimSpace(email))
 	var u domain.User
 	var err error
@@ -121,7 +133,7 @@ func (a *Auth) LoginRemember(ctx context.Context, email, password string, rememb
 		u, err = a.Accounts.ByLogin(ctx, identifier)
 	}
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
-		return domain.User{}, "", err
+		return domain.User{}, err
 	}
 	// Run bcrypt even for unknown accounts to reduce account enumeration by timing.
 	hash := u.PasswordHash
@@ -130,14 +142,9 @@ func (a *Auth) LoginRemember(ctx context.Context, email, password string, rememb
 	}
 	valid := a.Passwords.Matches(hash, password)
 	if err != nil || !valid {
-		return domain.User{}, "", domain.ErrCredentials
+		return domain.User{}, domain.ErrCredentials
 	}
-	ttl := a.SessionTTL
-	if remember {
-		ttl = a.RememberSessionTTL()
-	}
-	token, err := a.StartSessionFor(ctx, u.ID, ttl)
-	return u, token, err
+	return u, nil
 }
 
 func (a *Auth) StartSession(ctx context.Context, id int64) (string, error) {

@@ -5,7 +5,10 @@ import (
 	"time"
 )
 
-func (o *OAuth) PasswordAccess(ctx context.Context, userID, clientID int64) (OAuthTokens, error) {
+func (o *OAuth) PasswordAccess(ctx context.Context, client OAuthClient, userID int64) (OAuthTokens, error) {
+	if !client.SupportsGrant("password") || client.SecretHash == "" {
+		return OAuthTokens{}, OAuthError("unauthorized_client")
+	}
 	store, ok := o.Store.(interface {
 		IssuePasswordOAuthToken(context.Context, int64, int64, TokenPair) (GrantIdentity, error)
 	})
@@ -22,11 +25,11 @@ func (o *OAuth) PasswordAccess(ctx context.Context, userID, clientID int64) (OAu
 	}
 	now := o.Now()
 	pair := TokenPair{Digest(access), Digest(refresh), oauthExpiry(now, o.AccessTTL), oauthExpiry(now, o.RefreshTTL)}
-	if _, err = store.IssuePasswordOAuthToken(ctx, userID, clientID, pair); err != nil {
+	if _, err = store.IssuePasswordOAuthToken(ctx, userID, client.ID, pair); err != nil {
 		return OAuthTokens{}, err
 	}
 	if o.Signer != nil {
-		access, err = o.Signer.SignAccess(access, clientID, userID, []string{}, now, pair.AccessExpiry)
+		access, err = o.Signer.SignAccess(access, client.ID, userID, []string{}, now, pair.AccessExpiry)
 		if err != nil {
 			return OAuthTokens{}, err
 		}
