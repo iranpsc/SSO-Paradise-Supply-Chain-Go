@@ -125,7 +125,7 @@ func TestLaravelUserAndResourcesOverHTTP(t *testing.T) {
 	compare("POST", "/api/me", "verified_resource", true)
 }
 
-func TestPassportPasswordGrantAndDeviceClientPolicy(t *testing.T) {
+func TestPasswordGrantAndDeviceClientPolicy(t *testing.T) {
 	db := mysqltest.Open(t)
 	ctx := context.Background()
 	passwords := security.Bcrypt{Cost: 4}
@@ -133,7 +133,8 @@ func TestPassportPasswordGrantAndDeviceClientPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Create(ctx, domain.User{Name: "Password grant", Email: "password@example.com", PasswordHash: hash, CreatedAt: time.Now()}); err != nil {
+	user, err := db.Create(ctx, domain.User{Name: "Password grant", Email: "password@example.com", PasswordHash: hash, CreatedAt: time.Now()})
+	if err != nil {
 		t.Fatal(err)
 	}
 	secret, err := passwords.Hash("client-secret")
@@ -163,11 +164,40 @@ func TestPassportPasswordGrantAndDeviceClientPolicy(t *testing.T) {
 		h.ServeHTTP(w, r)
 		return w
 	}
-	for _, password := range []string{"wrong", "SecurePass%212026"} {
-		result := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password="+password)
-		if result.Code != 400 || !strings.Contains(result.Body.String(), `"error":"unsupported_grant_type"`) {
-			t.Fatal("disabled password grant accepted", result.Code, result.Body.String())
-		}
+	wrongPassword := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password=wrong")
+	if wrongPassword.Code != 400 || !strings.Contains(wrongPassword.Body.String(), `"error":"invalid_grant"`) {
+		t.Fatal("invalid user credentials were not rejected", wrongPassword.Code, wrongPassword.Body.String())
+	}
+	missingPassword := send("/oauth/token", base+"&grant_type=password&username=password%40example.com")
+	if missingPassword.Code != 400 || !strings.Contains(missingPassword.Body.String(), `"error":"invalid_request"`) {
+		t.Fatal("missing password was not rejected", missingPassword.Code, missingPassword.Body.String())
+	}
+	valid := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password=SecurePass%212026")
+	var tokens struct {
+		Access  string `json:"access_token"`
+		Refresh string `json:"refresh_token"`
+		Type    string `json:"token_type"`
+	}
+	if valid.Code != 200 || json.Unmarshal(valid.Body.Bytes(), &tokens) != nil || tokens.Access == "" || tokens.Refresh == "" || tokens.Type != "Bearer" {
+		t.Fatal("password grant failed", valid.Code, valid.Body.String())
+	}
+	var sessions int
+	if err = raw.QueryRow(`SELECT COUNT(*) FROM sessions WHERE user_id=?`, user.ID).Scan(&sessions); err != nil {
+		t.Fatal(err)
+	}
+	if sessions != 0 {
+		t.Fatal("password grant created a browser session")
+	}
+	refreshed := send("/oauth/token", base+"&grant_type=refresh_token&refresh_token="+tokens.Refresh)
+	if refreshed.Code != 200 || !strings.Contains(refreshed.Body.String(), `"access_token"`) {
+		t.Fatal("password grant refresh token could not be rotated", refreshed.Code, refreshed.Body.String())
+	}
+	if _, err = raw.Exec(`UPDATE oauth_clients SET grant_types='["authorization_code","refresh_token"]' WHERE id=?`, id); err != nil {
+		t.Fatal(err)
+	}
+	disabled := send("/oauth/token", base+"&grant_type=password&username=password%40example.com&password=SecurePass%212026")
+	if disabled.Code != 400 || !strings.Contains(disabled.Body.String(), `"error":"unauthorized_client"`) {
+		t.Fatal("client without password grant permission was accepted", disabled.Code, disabled.Body.String())
 	}
 	device := send("/oauth/device/code", fmt.Sprintf("client_id=%d", id))
 	if device.Code != 400 || !strings.Contains(device.Body.String(), `"error":"unauthorized_client"`) {

@@ -2,10 +2,12 @@ package httpapi
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/application"
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/domain"
@@ -240,7 +242,7 @@ func (s *Server) oauthToken(w http.ResponseWriter, r *http.Request) {
 		s.oauthError(w, passportError{application.OAuthInvalidRequest, "grant_type"}, r)
 		return
 	}
-	if grant != "authorization_code" && grant != "refresh_token" {
+	if grant != "authorization_code" && grant != "refresh_token" && grant != "password" {
 		s.oauthError(w, application.OAuthError("unsupported_grant_type"), r)
 		return
 	}
@@ -258,8 +260,66 @@ func (s *Server) oauthToken(w http.ResponseWriter, r *http.Request) {
 		s.oauthError(w, err, r)
 		return
 	}
-	if !client.SupportsGrant(grant) {
+	if !client.SupportsGrant(grant) || (grant == "password" && client.SecretHash == "") {
 		s.oauthError(w, application.OAuthError("unauthorized_client"), r)
+		return
+	}
+	if grant == "password" {
+		username, password := r.PostForm.Get("username"), r.PostForm.Get("password")
+		if username == "" || password == "" {
+			parameter := "username"
+			if username != "" {
+				parameter = "password"
+			}
+			s.oauthError(w, passportError{application.OAuthInvalidRequest, parameter}, r)
+			return
+		}
+		peer, _, peerErr := net.SplitHostPort(r.RemoteAddr)
+		if peerErr != nil {
+			peer = r.RemoteAddr
+		}
+		peer = s.clientIP(peer, r.Header.Get("X-Forwarded-For"))
+		failureKey := strings.ToLower(strings.TrimSpace(username)) + "\x00" + peer
+		failures, hasFailureLimiter := s.auth.Accounts.(application.LoginAttemptLimiter)
+		if hasFailureLimiter {
+			retry, e := failures.LoginRetry(r.Context(), failureKey, time.Now())
+			if e != nil {
+				s.fail(w, e)
+				return
+			}
+			if retry > 0 {
+				w.Header().Set("Retry-After", strconv.Itoa(int((retry+time.Second-1)/time.Second)))
+				rateFailure(w, r)
+				return
+			}
+		}
+		user, authErr := s.auth.AuthenticatePassword(r.Context(), username, password)
+		if authErr != nil {
+			if errors.Is(authErr, domain.ErrCredentials) {
+				if hasFailureLimiter {
+					if e := failures.FailedLogin(r.Context(), failureKey, time.Now()); e != nil {
+						s.fail(w, e)
+						return
+					}
+				}
+				s.oauthError(w, application.OAuthInvalidGrant, r)
+			} else {
+				s.fail(w, authErr)
+			}
+			return
+		}
+		if hasFailureLimiter {
+			if e := failures.ClearFailedLogins(r.Context(), failureKey); e != nil {
+				s.fail(w, e)
+				return
+			}
+		}
+		result, err := s.auth.OAuth.PasswordAccess(r.Context(), client, user.ID)
+		if err != nil {
+			s.oauthError(w, err, r)
+			return
+		}
+		passportTokens(w, result)
 		return
 	}
 	parameter := "code"
