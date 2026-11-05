@@ -22,7 +22,7 @@ Source of truth: the sibling Laravel repository's routes, controllers, resources
 
 ## Evidence
 
-`scripts/laravel-contracts.php` boots the actual source with synthetic models and array cache/session without querying production data. Its output is committed at `internal/transport/httpapi/testdata/laravel-contracts.json`. Tests compare Go responses against those fixtures and rerun the probe when PHP and the sibling vendor directory are available. Fixtures cover login validators, model/resource serialization, nonce messages, League errors, enabled grants and the route inventory. HTTP tests additionally cover forms, CSRF, guards, disabled password grants/refresh replay, imported sessions and avatar paths. Validation includes full Go tests/vet, frontend typecheck/build and 14 browser tests.
+`scripts/laravel-contracts.php` boots the actual source with synthetic models and array cache/session without querying production data. Its output is committed at `internal/transport/httpapi/testdata/laravel-contracts.json`. Tests compare Go responses against those fixtures and rerun the probe when PHP and the sibling vendor directory are available. Fixtures cover login validators, model/resource serialization, nonce messages, League errors, enabled grants and the route inventory. HTTP tests additionally cover forms, CSRF, guards, the Go-only confidential-client password grant/refresh replay, imported sessions and avatar paths. Validation includes full Go tests/vet, frontend typecheck/build and 14 browser tests.
 
 ## Device route configuration
 
