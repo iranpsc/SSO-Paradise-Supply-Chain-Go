@@ -117,11 +117,8 @@ func (s *Store) CreateWalletUser(ctx context.Context, address string, now time.T
 	if !errors.Is(err, sql.ErrNoRows) {
 		return u, err
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE code_sequence SET value=value+1 WHERE id=1"); err != nil {
-		return u, err
-	}
-	var code string
-	if err := tx.QueryRowContext(ctx, "SELECT CONCAT('hm-', value) FROM code_sequence WHERE id=1").Scan(&code); err != nil {
+	code, err := nextMemberCode(ctx, tx)
+	if err != nil {
 		return u, err
 	}
 	name := "User_" + address[2:8]
