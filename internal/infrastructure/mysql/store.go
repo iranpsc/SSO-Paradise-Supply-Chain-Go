@@ -229,6 +229,17 @@ func (s *Store) SaveAction(ctx context.Context, id int64, kind, hash, email stri
 	return tx.Commit()
 }
 
+func nextMemberCode(ctx context.Context, tx *sql.Tx) (string, error) {
+	var nextValue int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(CAST(SUBSTRING(code,4) AS UNSIGNED)),1999999)+1 FROM users WHERE code REGEXP '^hm-[0-9]+$'`).Scan(&nextValue); err != nil {
+		return "", err
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO code_sequence(id,value) VALUES(1,?) ON DUPLICATE KEY UPDATE value=VALUES(value)`, nextValue); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("hm-%d", nextValue), nil
+}
+
 func (s *Store) VerifyEmail(ctx context.Context, id int64, hash string, now time.Time) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -244,11 +255,8 @@ func (s *Store) VerifyEmail(ctx context.Context, id int64, hash string, now time
 	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE code_sequence SET value=value+1 WHERE id=1"); err != nil {
-		return err
-	}
-	var code string
-	if err := tx.QueryRowContext(ctx, "SELECT CONCAT('hm-', value) FROM code_sequence WHERE id=1").Scan(&code); err != nil {
+	code, err := nextMemberCode(ctx, tx)
+	if err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE users SET email_verified_at=?,code=COALESCE(code,?) WHERE id=?", stamp(now), code, id); err != nil {
@@ -453,11 +461,8 @@ func (s *Store) VerifySignedEmail(ctx context.Context, id int64, email string, n
 	if verified.Valid {
 		return nil
 	}
-	if _, err = tx.ExecContext(ctx, `UPDATE code_sequence SET value=value+1 WHERE id=1`); err != nil {
-		return err
-	}
-	var code string
-	if err = tx.QueryRowContext(ctx, `SELECT CONCAT('hm-',value) FROM code_sequence WHERE id=1`).Scan(&code); err != nil {
+	code, err := nextMemberCode(ctx, tx)
+	if err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE users SET email_verified_at=?,code=COALESCE(code,?) WHERE id=?`, stamp(now), code, id); err != nil {
