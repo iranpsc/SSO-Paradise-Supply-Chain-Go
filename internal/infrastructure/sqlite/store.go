@@ -189,10 +189,14 @@ func (s *Store) VerifyEmail(ctx context.Context, id int64, hash string, now time
 	if err != nil {
 		return err
 	}
-	var code string
-	if err := tx.QueryRowContext(ctx, "UPDATE code_sequence SET value=value+1 WHERE id=1 RETURNING 'hm-'||value").Scan(&code); err != nil {
+	var nextValue int64
+	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(CAST(substr(code,4) AS INTEGER)),1999999)+1 FROM users WHERE code LIKE 'hm-%'`).Scan(&nextValue); err != nil {
 		return err
 	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO code_sequence(id,value) VALUES(1,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value`, nextValue); err != nil {
+		return err
+	}
+	code := fmt.Sprintf("hm-%d", nextValue)
 	if _, err = tx.ExecContext(ctx, "UPDATE users SET email_verified_at=?,code=COALESCE(code,?) WHERE id=?", stamp(now), code, id); err != nil {
 		return err
 	}
