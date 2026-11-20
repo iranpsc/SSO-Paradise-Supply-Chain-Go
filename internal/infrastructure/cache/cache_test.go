@@ -202,7 +202,7 @@ func TestCachedUserKeepsPasswordHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Force the read to come from Redis (prime already happened in Create).
-	got, err := s.ByLogin(ctx, "hashuser")
+	got, err := s.ByLogin(ctx, "hash@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}

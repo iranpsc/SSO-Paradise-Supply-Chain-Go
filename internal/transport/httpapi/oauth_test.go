@@ -58,7 +58,7 @@ func TestPassportJWTLoginCallbackFlagConsumptionAndLogout(t *testing.T) {
 		h.ServeHTTP(w, r)
 		return w
 	}
-	login := do("POST", "/api/login", `{"login":"jwt_user","password":"SecurePass!2026","remember":true}`, "application/json", nil, "")
+	login := do("POST", "/api/login", `{"email":"jwt@example.com","password":"SecurePass!2026","remember":true}`, "application/json", nil, "")
 	if login.Code != 200 {
 		t.Fatal(login.Code, login.Body.String())
 	}
