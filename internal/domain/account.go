@@ -47,7 +47,7 @@ func ValidUsername(value string) bool { return usernamePattern.MatchString(value
 
 func ValidateIdentity(name, email string, maxName int) Validation {
 	v := Validation{}
-	if n := utf8.RuneCountInString(name); n == 0 || n > maxName || strings.HasPrefix(strings.ToLower(name), "hm-") {
+	if n := utf8.RuneCountInString(name); n > maxName || (n > 0 && strings.HasPrefix(strings.ToLower(name), "hm-")) {
 		v["name"] = "نام معتبر وارد کنید؛ پیشوند رزروشدهٔ حساب‌های کیف پول مجاز نیست."
 	}
 	a, err := mail.ParseAddress(email)

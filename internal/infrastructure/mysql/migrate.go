@@ -181,7 +181,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		}
 	}
 	columns := []struct{ table, name, definition string }{
-		{"users", "id", "BIGINT NOT NULL AUTO_INCREMENT"}, {"users", "username", "VARCHAR(30) NULL"},
+		{"users", "id", "BIGINT NOT NULL AUTO_INCREMENT"}, {"users", "name", "VARCHAR(255) NULL"}, {"users", "username", "VARCHAR(30) NULL"},
 		{"users", "email", "VARCHAR(255) NULL"}, {"users", "password_hash", "VARCHAR(255) NULL"},
 		{"users", "code", "VARCHAR(32) NULL"}, {"users", "referral", "VARCHAR(32) NOT NULL DEFAULT ''"},
 		{"personal_infos", "user_id", "BIGINT NOT NULL"}, {"profile_details", "user_id", "BIGINT NOT NULL"},
