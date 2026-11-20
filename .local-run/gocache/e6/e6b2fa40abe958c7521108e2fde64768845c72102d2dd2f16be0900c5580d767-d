@@ -1,8 +1,0 @@
-./breached.go
-./jwt.go
-./laravel_cookie.go
-./passport_cipher.go
-./password.go
-./php_session.go
-./signed.go
-./web3.go

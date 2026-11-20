@@ -1,5 +1,0 @@
-./config.go
-./file.go
-./notifications.go
-./outbox.go
-./smtp.go

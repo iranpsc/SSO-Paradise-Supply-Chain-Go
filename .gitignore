@@ -22,6 +22,7 @@ Thumbs.db
 
 # Runtime data (including keys and generated test credentials)
 var/
+/.local-run/
 # Retired embedded frontend: prevent local restores from adding it to Git.
 /web/
 /deploy/secrets/
