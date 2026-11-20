@@ -86,7 +86,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	}
 	// Preflight every narrowing conversion before changing any existing data.
 	lengths := map[string]map[string]int{
-		"users":    {"username": 30, "password_hash": 255, "code": 32, "referral": 32},
+		"users":    {"password_hash": 255, "code": 32, "referral": 32},
 		"sessions": {"token_hash": 64}, "actions": {"token_hash": 64, "kind": 6},
 		"wallets": {"address": 42}, "challenges": {"key": 100},
 		"media":              {"kind": 20, "content_type": 32},
@@ -181,7 +181,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 		}
 	}
 	columns := []struct{ table, name, definition string }{
-		{"users", "id", "BIGINT NOT NULL AUTO_INCREMENT"}, {"users", "name", "VARCHAR(255) NULL"}, {"users", "username", "VARCHAR(30) NULL"},
+		{"users", "id", "BIGINT NOT NULL AUTO_INCREMENT"}, {"users", "name", "VARCHAR(255) NULL"},
 		{"users", "email", "VARCHAR(255) NULL"}, {"users", "password_hash", "VARCHAR(255) NULL"},
 		{"users", "code", "VARCHAR(32) NULL"}, {"users", "referral", "VARCHAR(32) NOT NULL DEFAULT ''"},
 		{"personal_infos", "user_id", "BIGINT NOT NULL"}, {"profile_details", "user_id", "BIGINT NOT NULL"},

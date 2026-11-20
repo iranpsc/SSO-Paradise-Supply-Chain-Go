@@ -33,7 +33,6 @@ type cachedUser struct {
 	UpdatedAt       time.Time  `json:"updated_at"`
 	ID              int64      `json:"id"`
 	Name            string     `json:"name"`
-	Username        string     `json:"username"`
 	Email           string     `json:"email"`
 	PasswordHash    string     `json:"password_hash"`
 	Code            *string    `json:"code"`
@@ -46,7 +45,7 @@ type cachedUser struct {
 func cachedUserFrom(u domain.User) cachedUser {
 	return cachedUser{
 		Mobile: u.Mobile, UpdatedAt: u.UpdatedAt,
-		ID: u.ID, Name: u.Name, Username: u.Username, Email: u.Email,
+		ID: u.ID, Name: u.Name, Email: u.Email,
 		PasswordHash: u.PasswordHash, Code: u.Code, Wallet: u.Wallet, Referral: u.Referral,
 		EmailVerifiedAt: u.EmailVerifiedAt, CreatedAt: u.CreatedAt,
 	}
@@ -55,7 +54,7 @@ func cachedUserFrom(u domain.User) cachedUser {
 func (c cachedUser) user() domain.User {
 	return domain.User{
 		Mobile: c.Mobile, UpdatedAt: c.UpdatedAt,
-		ID: c.ID, Name: c.Name, Username: c.Username, Email: c.Email,
+		ID: c.ID, Name: c.Name, Email: c.Email,
 		PasswordHash: c.PasswordHash, Code: c.Code, Wallet: c.Wallet, Referral: c.Referral,
 		EmailVerifiedAt: c.EmailVerifiedAt, CreatedAt: c.CreatedAt,
 	}
@@ -105,9 +104,6 @@ func userKey(id int64) string { return "sso:user:" + strconv.FormatInt(id, 10) }
 func emailKey(email string) string {
 	return "sso:uid:email:" + strings.ToLower(strings.TrimSpace(email))
 }
-func usernameKey(name string) string {
-	return "sso:uid:username:" + strings.ToLower(strings.TrimSpace(name))
-}
 func sessionKey(hash string) string { return "sso:session:" + hash }
 func tokensKey(id int64) string     { return "sso:tokens:" + strconv.FormatInt(id, 10) }
 func profileKey(id int64) string    { return "sso:profile:" + strconv.FormatInt(id, 10) }
@@ -151,9 +147,7 @@ func (s *Store) del(ctx context.Context, keys ...string) {
 	}
 }
 
-// primeUser stores the user object plus stable id mappings. Email/username map
-// to the numeric id so a later email change only needs key deletes, and the
-// user object itself is invalidated separately from the mappings.
+// primeUser stores the user object plus its stable email mapping.
 //
 // Note: domain.User hides PasswordHash from JSON, but login and password
 // change verify against it, so the cache stores an explicit copy including
@@ -168,11 +162,6 @@ func (s *Store) primeUser(ctx context.Context, u domain.User) {
 	if u.Email != "" {
 		if err := s.Redis.Set(ctx, emailKey(u.Email), u.ID, ttl).Err(); err != nil {
 			s.warn(ctx, "set email map", err)
-		}
-	}
-	if u.Username != "" {
-		if err := s.Redis.Set(ctx, usernameKey(u.Username), u.ID, ttl).Err(); err != nil {
-			s.warn(ctx, "set username map", err)
 		}
 	}
 }

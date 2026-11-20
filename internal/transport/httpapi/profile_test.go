@@ -37,9 +37,9 @@ func profileServer(t *testing.T) (http.Handler, *application.Auth, *mailboxCaptu
 	return h, a, m
 }
 
-func registerVerified(t *testing.T, h http.Handler, a *application.Auth, m *mailboxCapture, username, email string) *http.Cookie {
+func registerVerified(t *testing.T, h http.Handler, a *application.Auth, m *mailboxCapture, _ string, email string) *http.Cookie {
 	t.Helper()
-	w := request(h, "POST", "/api/register", `{"username":"`+username+`","name":"Test User","email":"`+email+`","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	w := request(h, "POST", "/api/register", `{"name":"Test User","email":"`+email+`","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
 	if w.Code != 201 {
 		t.Fatalf("register %d %s", w.Code, w.Body.String())
 	}
@@ -111,7 +111,7 @@ func multipartProfile(t *testing.T, fields map[string]string, files map[string]s
 
 func TestPersonalInfoFlow(t *testing.T) {
 	h, a, m := profileServer(t)
-	cookie := registerVerified(t, h, a, m, "profileuser", "p@example.com")
+	cookie := registerVerified(t, h, a, m, "", "p@example.com")
 
 	// GET empty personal-info requires verified (we are verified) -> 200 with empty names.
 	r := httptest.NewRequest("GET", "/api/personal-info", nil)
@@ -186,7 +186,7 @@ func TestPersonalInfoFlow(t *testing.T) {
 
 func TestAvatarFlow(t *testing.T) {
 	h, a, m := profileServer(t)
-	cookie := registerVerified(t, h, a, m, "avataruser", "av@example.com")
+	cookie := registerVerified(t, h, a, m, "", "av@example.com")
 
 	raw, _ := base64.StdEncoding.DecodeString(png1x1)
 	var buf bytes.Buffer

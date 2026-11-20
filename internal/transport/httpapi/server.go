@@ -123,8 +123,6 @@ func (s *Server) fail(w http.ResponseWriter, err error) {
 		respond(w, 422, map[string]any{"message": "اطلاعات واردشده معتبر نیست.", "errors": validationMessages(v)})
 	case errors.Is(err, domain.ErrConflict):
 		respond(w, 422, map[string]any{"message": "این ایمیل قبلاً ثبت شده است.", "errors": map[string][]string{"email": {"این ایمیل قبلاً ثبت شده است."}}})
-	case errors.Is(err, domain.ErrUsernameConflict):
-		respond(w, 422, map[string]any{"message": "این نام کاربری قبلاً انتخاب شده است.", "errors": map[string][]string{"username": {"این نام کاربری قبلاً انتخاب شده است."}}})
 	case errors.Is(err, domain.ErrCredentials):
 		respond(w, 401, map[string]string{"message": "اطلاعات ورود معتبر نیست."})
 	case errors.Is(err, domain.ErrUnverified):

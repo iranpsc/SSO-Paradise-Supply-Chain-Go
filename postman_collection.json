@@ -16,6 +16,22 @@
     {
       "key": "token",
       "value": ""
+    },
+    {
+      "key": "oauthClientId",
+      "value": "44"
+    },
+    {
+      "key": "oauthClientSecret",
+      "value": ""
+    },
+    {
+      "key": "oauthUsername",
+      "value": ""
+    },
+    {
+      "key": "oauthPassword",
+      "value": ""
     }
   ],
   "event": [
@@ -82,7 +98,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"username\": \"johndoe\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/register",
@@ -100,7 +116,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"johndoe\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\",\n  \"password_confirmation\": \"SecurePass1!\",\n  \"referral\": \"\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/register",
@@ -114,7 +130,7 @@
                 { "key": "Content-Type", "value": "application/json; charset=utf-8" },
                 { "key": "Set-Cookie", "value": "paradise_session=<token>; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400" }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
             },
             {
               "name": "Validation Error (422)",
@@ -125,7 +141,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"username\": \"ab\",\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\",\n  \"password_confirmation\": \"mismatch\"\n}"
+                  "raw": "{\n  \"name\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\",\n  \"password_confirmation\": \"mismatch\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/register",
@@ -138,7 +154,7 @@
               "header": [
                 { "key": "Content-Type", "value": "application/json; charset=utf-8" }
               ],
-              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"name\": [\"نام معتبر وارد کنید؛ پیشوند hm- مجاز نیست.\"],\n    \"email\": [\"ایمیل معتبر وارد کنید.\"],\n    \"username\": [\"نام کاربری باید ۳ تا ۳۰ نویسه، با حرف انگلیسی آغاز و فقط شامل حروف انگلیسی، عدد و زیرخط باشد.\"],\n    \"password\": [\"رمز باید ۸ تا ۴۰ نویسه و شامل حروف بزرگ و کوچک، عدد و نماد باشد.\"],\n    \"password_confirmation\": [\"تکرار رمز مطابقت ندارد.\"]\n  }\n}"
+              "body": "{\n  \"message\": \"اطلاعات واردشده معتبر نیست.\",\n  \"errors\": {\n    \"name\": [\"نام معتبر و الزامی وارد کنید؛ پیشوند رزروشدهٔ حساب‌های کیف پول مجاز نیست.\"],\n    \"email\": [\"ایمیل معتبر وارد کنید.\"],\n    \"password\": [\"رمز باید ۸ تا ۴۰ نویسه و شامل حروف بزرگ و کوچک، عدد و نماد باشد.\"],\n    \"password_confirmation\": [\"تکرار رمز مطابقت ندارد.\"]\n  }\n}"
             }
           ]
         },
@@ -151,7 +167,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"SecurePass1!\"\n}"
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/login",
@@ -169,7 +185,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"SecurePass1!\"\n}"
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"SecurePass1!\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/login",
@@ -194,7 +210,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"login\": \"johndoe\",\n  \"password\": \"WrongPass!\"\n}"
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"WrongPass!\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/login",
@@ -210,6 +226,32 @@
               "body": "{\n  \"message\": \"Invalid credentials\"\n}"
             }
           ]
+        },
+        {
+          "name": "OAuth Password Token (Go only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                { "key": "grant_type", "value": "password", "type": "text" },
+                { "key": "client_id", "value": "{{oauthClientId}}", "type": "text" },
+                { "key": "client_secret", "value": "{{oauthClientSecret}}", "type": "text" },
+                { "key": "username", "value": "{{oauthUsername}}", "type": "text" },
+                { "key": "password", "value": "{{oauthPassword}}", "type": "text" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/oauth/token",
+              "host": ["{{baseUrl}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Local Go backend OAuth password-grant request. Use a confidential client whose grant_types includes password. Set the secret and user credentials in Postman variables; they are intentionally blank in this collection. This legacy grant is not enabled by the Laravel server."
+          },
+          "response": []
         },
         {
           "name": "Logout",
@@ -397,7 +439,7 @@
               "header": [
                 { "key": "Content-Type", "value": "application/json; charset=utf-8" }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  }\n}"
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Doe\",\n    \"email\": \"john@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  }\n}"
             }
           ]
         },
@@ -433,7 +475,7 @@
               "header": [
                 { "key": "Content-Type", "value": "application/json; charset=utf-8" }
               ],
-              "body": "{\n  \"id\": 1,\n  \"name\": \"John Doe\",\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"code\": null,\n  \"referral\": \"\",\n  \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}"
+              "body": "{\n  \"id\": 1,\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"code\": null,\n  \"referral\": \"\",\n  \"email_verified_at\": \"2026-10-01T12:05:00Z\",\n  \"created_at\": \"2026-10-01T12:00:00Z\"\n}"
             }
           ]
         },
@@ -515,7 +557,7 @@
               "header": [
                 { "key": "Content-Type", "value": "application/json; charset=utf-8" }
               ],
-              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Updated\",\n    \"username\": \"johndoe\",\n    \"email\": \"john.new@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
+              "body": "{\n  \"data\": {\n    \"id\": 1,\n    \"name\": \"John Updated\",\n    \"email\": \"john.new@example.com\",\n    \"code\": null,\n    \"referral\": \"\",\n    \"email_verified_at\": null,\n    \"created_at\": \"2026-10-01T12:00:00Z\"\n  },\n  \"verification_sent\": true\n}"
             },
             {
               "name": "Unverified (403)",

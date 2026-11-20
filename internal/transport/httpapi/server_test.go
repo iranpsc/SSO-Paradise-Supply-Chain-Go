@@ -46,9 +46,12 @@ func request(h http.Handler, method, path, body, origin string, cookie *http.Coo
 }
 func TestCookieSessionCSRFAndProtectedRoutes(t *testing.T) {
 	h := server(t)
-	w := request(h, "POST", "/api/register", `{"username":"tester","name":"Test","email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "http://localhost:3000", nil)
+	w := request(h, "POST", "/api/register", `{"name":"Test","email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "http://localhost:3000", nil)
 	if w.Code != 201 {
 		t.Fatal(w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), `"username"`) {
+		t.Fatal("registration response still includes username")
 	}
 	cookies := w.Result().Cookies()
 	if len(cookies) != 1 || !cookies[0].HttpOnly || cookies[0].SameSite != http.SameSiteLaxMode {
@@ -77,6 +80,17 @@ func TestCookieSessionCSRFAndProtectedRoutes(t *testing.T) {
 	}
 	if w := request(h, "GET", "/api/account", "", "", cookie); w.Code != 401 {
 		t.Fatal("revoked cookie allowed")
+	}
+}
+func TestRegisterRequiresNameAndRejectsUsername(t *testing.T) {
+	h := server(t)
+	missingName := request(h, "POST", "/api/register", `{"email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	if missingName.Code != 422 || !strings.Contains(missingName.Body.String(), `"name"`) {
+		t.Fatalf("registration accepted missing name: %d %s", missingName.Code, missingName.Body.String())
+	}
+	legacyUsername := request(h, "POST", "/api/register", `{"username":"tester","name":"Test","email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	if legacyUsername.Code != 400 {
+		t.Fatalf("registration accepted removed username field: %d %s", legacyUsername.Code, legacyUsername.Body.String())
 	}
 }
 func TestLaravelLoginInvalidInputAndThrottles(t *testing.T) {
@@ -125,7 +139,7 @@ func TestCrossOriginLoginBlocked(t *testing.T) {
 
 func TestLaravelAPIResponseShapes(t *testing.T) {
 	h := server(t)
-	w := request(h, "POST", "/api/register", `{"username":"tester","name":"Test","email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	w := request(h, "POST", "/api/register", `{"name":"Test","email":"a@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
 	if w.Code != 201 {
 		t.Fatal(w.Code, w.Body.String())
 	}

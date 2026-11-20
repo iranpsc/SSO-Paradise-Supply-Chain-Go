@@ -27,10 +27,10 @@ func fixture(t *testing.T) (*cache.Store, *mysql.Store, *miniredis.Miniredis) {
 	return s, db, mr
 }
 
-func createUser(t *testing.T, s *cache.Store, username, email string) domain.User {
+func createUser(t *testing.T, s *cache.Store, email string) domain.User {
 	t.Helper()
 	u, err := s.Create(context.Background(), domain.User{
-		Name: "Test User", Username: username, Email: email,
+		Name: "Test User", Email: email,
 		PasswordHash: "hash", CreatedAt: time.Now(),
 	})
 	if err != nil {
@@ -42,7 +42,7 @@ func createUser(t *testing.T, s *cache.Store, username, email string) domain.Use
 func TestUserReadThroughAndIdentityInvalidation(t *testing.T) {
 	s, db, _ := fixture(t)
 	ctx := context.Background()
-	u := createUser(t, s, "cacheuser", "cache@example.com")
+	u := createUser(t, s, "cache@example.com")
 
 	// Cached read: change the database behind the cache, the store must
 	// still return the cached (old) name.
@@ -60,7 +60,7 @@ func TestUserReadThroughAndIdentityInvalidation(t *testing.T) {
 	if got, err := s.ByEmail(ctx, "CACHE@example.com"); err != nil || got.Name != "Test User" {
 		t.Fatalf("ByEmail not cached: %v %q", err, got.Name)
 	}
-	if got, err := s.ByLogin(ctx, "CACHEUSER"); err != nil || got.ID != u.ID {
+	if got, err := s.ByLogin(ctx, "CACHE@example.com"); err != nil || got.ID != u.ID {
 		t.Fatalf("ByLogin not cached: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func TestUserReadThroughAndIdentityInvalidation(t *testing.T) {
 func TestSessionCacheAndRevocation(t *testing.T) {
 	s, _, _ := fixture(t)
 	ctx := context.Background()
-	u := createUser(t, s, "sessuser", "sess@example.com")
+	u := createUser(t, s, "sess@example.com")
 
 	digest := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 	if err := s.CreateSession(ctx, u.ID, digest, time.Now().Add(time.Hour)); err != nil {
@@ -113,7 +113,7 @@ func TestSessionCacheAndRevocation(t *testing.T) {
 func TestChangePasswordDropsSessions(t *testing.T) {
 	s, _, _ := fixture(t)
 	ctx := context.Background()
-	u := createUser(t, s, "pwuser", "pw@example.com")
+	u := createUser(t, s, "pw@example.com")
 	hashes := []string{
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -141,8 +141,8 @@ func TestChangePasswordDropsSessions(t *testing.T) {
 func TestProfileCacheInvalidatesSingleUser(t *testing.T) {
 	s, db, _ := fixture(t)
 	ctx := context.Background()
-	a := createUser(t, s, "profilea", "a@example.com")
-	b := createUser(t, s, "profileb", "b@example.com")
+	a := createUser(t, s, "a@example.com")
+	b := createUser(t, s, "b@example.com")
 
 	mk := func(first string) domain.PersonalInfo {
 		no := false
@@ -198,7 +198,7 @@ func TestCachedUserKeepsPasswordHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.Create(ctx, domain.User{Name: "Hash User", Username: "hashuser", Email: "hash@example.com", PasswordHash: hash, CreatedAt: time.Now()}); err != nil {
+	if _, err := s.Create(ctx, domain.User{Name: "Hash User", Email: "hash@example.com", PasswordHash: hash, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
 	// Force the read to come from Redis (prime already happened in Create).
@@ -221,7 +221,7 @@ func TestNilRedisIsDatabaseOnly(t *testing.T) {
 	db := mysqltest.Open(t)
 	s := &cache.Store{DB: db}
 	ctx := context.Background()
-	u, err := s.Create(ctx, domain.User{Name: "No Redis", Username: "noredis", Email: "nr@example.com", PasswordHash: "h", CreatedAt: time.Now()})
+	u, err := s.Create(ctx, domain.User{Name: "No Redis", Email: "nr@example.com", PasswordHash: "h", CreatedAt: time.Now()})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,7 +241,7 @@ func TestCachedSessionsCannotExtendExpiryOrResurrectCredentials(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	u, err := s.Create(ctx, domain.User{Name: "Cached", Username: "cached_security", Email: "security@example.com", PasswordHash: hash, CreatedAt: time.Now()})
+	u, err := s.Create(ctx, domain.User{Name: "Cached", Email: "security@example.com", PasswordHash: hash, CreatedAt: time.Now()})
 	if err != nil {
 		t.Fatal(err)
 	}

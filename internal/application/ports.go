@@ -91,7 +91,6 @@ type Registration struct {
 	ClientID     *int64 `json:"client_id"`
 	RedirectURI  string `json:"redirect_uri"`
 	BackURL      string `json:"back_url"`
-	Username     string `json:"username"`
 	Name         string `json:"name"`
 	Email        string `json:"email"`
 	Password     string `json:"password"`

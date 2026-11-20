@@ -49,24 +49,7 @@ func (s *Store) ByEmail(ctx context.Context, email string) (domain.User, error) 
 }
 
 func (s *Store) ByLogin(ctx context.Context, identifier string) (domain.User, error) {
-	if !s.enabled() {
-		return s.DB.ByLogin(ctx, identifier)
-	}
-	if strings.Contains(identifier, "@") {
-		return s.ByEmail(ctx, identifier)
-	}
-	if id, ok := s.cachedID(ctx, usernameKey(identifier)); ok {
-		if u, err := s.ByID(ctx, id); err == nil {
-			return u, nil
-		}
-		s.del(ctx, usernameKey(identifier))
-	}
-	u, err := s.DB.ByLogin(ctx, identifier)
-	if err != nil {
-		return u, err
-	}
-	s.primeUser(ctx, u)
-	return u, nil
+	return s.ByEmail(ctx, identifier)
 }
 
 func (s *Store) CodeExists(ctx context.Context, code string) (bool, error) {

@@ -377,7 +377,7 @@ func (s *Server) legacyForgot(w http.ResponseWriter, r *http.Request) {
 }
 
 func filterLegacyInput(path string, in map[string]any) map[string]any {
-	keys := map[string]string{"/login": "login email password remember", "/account": "name email", "/register": "name email username password password_confirmation referral client_id redirect_uri back_url", "/password/email": "email", "/password/reset": "email token password password_confirmation", "/password/confirm": "password", "/change-password": "password password_confirmation current_password", "/personal-info": "is_company first_name last_name mobile telephone national_code address company_name company_address company_registration_number company_national_number company_tax_number company_executive_name"}
+	keys := map[string]string{"/login": "login email password remember", "/account": "name email", "/register": "name email password password_confirmation referral client_id redirect_uri back_url", "/password/email": "email", "/password/reset": "email token password password_confirmation", "/password/confirm": "password", "/change-password": "password password_confirmation current_password", "/personal-info": "is_company first_name last_name mobile telephone national_code address company_name company_address company_registration_number company_national_number company_tax_number company_executive_name"}
 	allowed := strings.Fields(keys[path])
 	out := map[string]any{}
 	for _, key := range allowed {
@@ -428,14 +428,6 @@ func (s *Server) legacyRegister(w http.ResponseWriter, r *http.Request) {
 	in, ok := laravelInput(w, r)
 	if !ok {
 		return
-	}
-	if inputString(in, "username") == "" {
-		nonce := make([]byte, 8)
-		if _, err := rand.Read(nonce); err != nil {
-			s.fail(w, err)
-			return
-		}
-		in["username"] = "member_" + hex.EncodeToString(nonce)
 	}
 	replaceJSONBody(r, in)
 	s.register(w, r)

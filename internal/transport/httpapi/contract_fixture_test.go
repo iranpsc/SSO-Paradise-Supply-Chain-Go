@@ -49,7 +49,7 @@ func TestLaravelModelSerializationFromSourceFixture(t *testing.T) {
 	source := sourceContracts(t)
 	stamp, _ := time.Parse(time.RFC3339, "2026-01-01T23:34:05Z")
 	code := "hm-2000042"
-	u := domain.User{ID: 42, Name: "Test", Email: "test@example.com", Username: "extension_only", PasswordHash: "secret", Code: &code, CreatedAt: stamp, UpdatedAt: stamp, EmailVerifiedAt: &stamp}
+	u := domain.User{ID: 42, Name: "Test", Email: "test@example.com", PasswordHash: "secret", Code: &code, CreatedAt: stamp, UpdatedAt: stamp, EmailVerifiedAt: &stamp}
 	assertJSON(t, source["user"], laravelUser(u))
 	nullable := laravelUser(domain.User{ID: 43})
 	for _, key := range []string{"name", "email", "referral", "mobile", "wallet_address", "code", "email_verified_at", "created_at", "updated_at"} {

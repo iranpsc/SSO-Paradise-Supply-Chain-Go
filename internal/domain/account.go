@@ -3,7 +3,6 @@ package domain
 import (
 	"errors"
 	"net/mail"
-	"regexp"
 	"strings"
 	"time"
 	"unicode"
@@ -11,12 +10,11 @@ import (
 )
 
 var (
-	ErrNotFound         = errors.New("not found")
-	ErrConflict         = errors.New("email already registered")
-	ErrUsernameConflict = errors.New("username already registered")
-	ErrCredentials      = errors.New("invalid credentials")
-	ErrUnverified       = errors.New("email verification required")
-	ErrToken            = errors.New("invalid or expired token")
+	ErrNotFound    = errors.New("not found")
+	ErrConflict    = errors.New("email already registered")
+	ErrCredentials = errors.New("invalid credentials")
+	ErrUnverified  = errors.New("email verification required")
+	ErrToken       = errors.New("invalid or expired token")
 )
 
 type Validation map[string]string
@@ -28,7 +26,6 @@ type User struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	ID           int64     `json:"id"`
 	Name         string    `json:"name"`
-	Username     string    `json:"username"`
 	Email        string    `json:"email"`
 	PasswordHash string    `json:"-"`
 	Code         *string   `json:"code"`
@@ -41,14 +38,10 @@ type User struct {
 	CreatedAt       time.Time  `json:"created_at"`
 }
 
-var usernamePattern = regexp.MustCompile(`^[a-z][a-z0-9_]{2,29}$`)
-
-func ValidUsername(value string) bool { return usernamePattern.MatchString(value) }
-
 func ValidateIdentity(name, email string, maxName int) Validation {
 	v := Validation{}
-	if n := utf8.RuneCountInString(name); n > maxName || (n > 0 && strings.HasPrefix(strings.ToLower(name), "hm-")) {
-		v["name"] = "نام معتبر وارد کنید؛ پیشوند رزروشدهٔ حساب‌های کیف پول مجاز نیست."
+	if n := utf8.RuneCountInString(name); n == 0 || n > maxName || strings.HasPrefix(strings.ToLower(name), "hm-") {
+		v["name"] = "نام معتبر و الزامی وارد کنید؛ پیشوند رزروشدهٔ حساب‌های کیف پول مجاز نیست."
 	}
 	a, err := mail.ParseAddress(email)
 	if err != nil || a.Address != email || len(email) > 255 {

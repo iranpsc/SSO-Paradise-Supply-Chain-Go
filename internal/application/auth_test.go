@@ -17,11 +17,11 @@ import (
 
 const password = "SecurePass!2026"
 
-func TestLoginAcceptsUsernameAndEmail(t *testing.T) {
+func TestLoginAcceptsEmailOnly(t *testing.T) {
 	a, _, _ := fixture(t)
 	u := register(t, a, "username@example.com")
 	ctx := context.Background()
-	for _, identifier := range []string{u.Email, strings.ToUpper(u.Username)} {
+	for _, identifier := range []string{u.Email, strings.ToUpper(u.Email)} {
 		got, token, err := a.Login(ctx, identifier, password)
 		if err != nil || got.ID != u.ID || token == "" {
 			t.Fatalf("login failed for %q: %v", identifier, err)
@@ -30,12 +30,13 @@ func TestLoginAcceptsUsernameAndEmail(t *testing.T) {
 			t.Fatal("wrong password accepted")
 		}
 	}
-	for _, username := range []string{"", "ab", "1member", "member name", "member@example.com"} {
-		_, err := a.Register(ctx, application.Registration{Username: username, Name: "Name", Email: "another@example.com", Password: password, Confirmation: password})
-		var fields domain.Validation
-		if !errors.As(err, &fields) || fields["username"] == "" {
-			t.Fatalf("accepted invalid username: %q", username)
-		}
+	if _, _, err := a.Login(ctx, "کاربر تست", password); !errors.Is(err, domain.ErrCredentials) {
+		t.Fatal("display name was accepted as login")
+	}
+	_, err := a.Register(ctx, application.Registration{Email: "another@example.com", Password: password, Confirmation: password})
+	var fields domain.Validation
+	if !errors.As(err, &fields) || fields["name"] == "" {
+		t.Fatal("registration accepted a missing name")
 	}
 }
 
@@ -69,7 +70,7 @@ func fixture(t *testing.T) (*application.Auth, *mysql.Store, *mailbox) {
 }
 func register(t *testing.T, a *application.Auth, email string) domain.User {
 	t.Helper()
-	u, err := a.Register(context.Background(), application.Registration{Username: "user_" + strings.Split(email, "@")[0], Name: "کاربر تست", Email: email, Password: password, Confirmation: password})
+	u, err := a.Register(context.Background(), application.Registration{Name: "کاربر تست", Email: email, Password: password, Confirmation: password})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,18 +102,18 @@ func TestRegistrationPreservesLaravelRules(t *testing.T) {
 	if !a.Passwords.Matches(u.PasswordHash, password) {
 		t.Fatal("password not hashed correctly")
 	}
-	_, err := a.Register(ctx, application.Registration{Username: "tester", Name: "Other", Email: "user@example.com", Password: password, Confirmation: password})
+	_, err := a.Register(ctx, application.Registration{Name: "Other", Email: "user@example.com", Password: password, Confirmation: password})
 	if !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("duplicate email: %v", err)
 	}
 	for _, name := range []string{"hm-admin", "HM-admin", "hM-admin", "Hm-admin", strings.Repeat("ن", 51)} {
-		_, err := a.Register(ctx, application.Registration{Username: "tester", Name: name, Email: "other@example.com", Password: password, Confirmation: password})
+		_, err := a.Register(ctx, application.Registration{Name: name, Email: "other@example.com", Password: password, Confirmation: password})
 		var v domain.Validation
 		if !errors.As(err, &v) || v["name"] == "" {
 			t.Errorf("accepted name %q", name)
 		}
 	}
-	_, err = a.Register(ctx, application.Registration{Username: "tester", Name: "Other", Email: "other@example.com", Password: password, Confirmation: password, Referral: "hm-9999"})
+	_, err = a.Register(ctx, application.Registration{Name: "Other", Email: "other@example.com", Password: password, Confirmation: password, Referral: "hm-9999"})
 	var v domain.Validation
 	if !errors.As(err, &v) || v["referral"] == "" {
 		t.Fatal("invalid referral accepted")

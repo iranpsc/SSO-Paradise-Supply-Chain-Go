@@ -27,7 +27,7 @@ import (
 const demoPassword = "TestPass!2026"
 
 type account struct {
-	Username string `json:"username"`
+	Name     string `json:"name"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Verified bool   `json:"verified"`
@@ -107,16 +107,16 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	definitions := []account{{Username: "demo_verified", Email: "verified@example.test", Verified: true}, {Username: "demo_pending", Email: "pending@example.test"}, {Username: "demo_wallet", Email: "wallet@example.test", Verified: true}, {Username: "demo_wallet_pending", Email: "wallet.pending@example.test"}, {Username: "demo_member", Email: "member@example.test", Verified: true}}
+	definitions := []account{{Name: "Demo Verified", Email: "verified@example.test", Verified: true}, {Name: "Demo Pending", Email: "pending@example.test"}, {Name: "Demo Wallet", Email: "wallet@example.test", Verified: true}, {Name: "Demo Wallet Pending", Email: "wallet.pending@example.test"}, {Name: "Demo Member", Email: "member@example.test", Verified: true}}
 	m.Accounts = nil
 	for _, item := range definitions {
 		u, err := db.ByLogin(ctx, item.Email)
 		if errors.Is(err, domain.ErrNotFound) {
-			u, err = db.Create(ctx, domain.User{Name: strings.ReplaceAll(item.Username, "_", " "), Username: item.Username, Email: item.Email, PasswordHash: hash, CreatedAt: time.Now()})
+			u, err = db.Create(ctx, domain.User{Name: item.Name, Email: item.Email, PasswordHash: hash, CreatedAt: time.Now()})
 			if err == nil && item.Verified {
 				err = db.VerifySignedEmail(ctx, u.ID, u.Email, time.Now())
 			}
-		} else if err == nil && u.Username != item.Username {
+		} else if err == nil && u.Name != item.Name {
 			return errors.New("seed email belongs to a different account")
 		}
 		if err != nil {
@@ -146,15 +146,15 @@ func run() error {
 		return err
 	}
 	var guide strings.Builder
-	fmt.Fprintln(&guide, "# Local frontend test credentials\n\nURL: http://localhost:3000\n\nAll passwords: `"+demoPassword+"`\n\n| Username | Email | Verified |\n|---|---|---|")
+	fmt.Fprintln(&guide, "# Local frontend test credentials\n\nURL: http://localhost:3000\n\nAll passwords: `"+demoPassword+"`\n\n| Name | Email | Verified |\n|---|---|---|")
 	for _, a := range m.Accounts {
-		fmt.Fprintf(&guide, "| %s | %s | %t |\n", a.Username, a.Email, a.Verified)
+		fmt.Fprintf(&guide, "| %s | %s | %t |\n", a.Name, a.Email, a.Verified)
 	}
-	fmt.Fprintln(&guide, "\nFresh email registration: `new.member@example.test`, username `new_member` (use a new suffix after each successful registration).\n\nImport a private key into a separate MetaMask test account. Keys have no funds and are for local testing only. WalletConnect uses the same account imported into a compatible mobile wallet.\n\n| Scenario | Address | Private key |\n|---|---|---|")
+	fmt.Fprintln(&guide, "\nFresh email registration: `new.member@example.test` (use a new suffix after each successful registration).\n\nImport a private key into a separate MetaMask test account. Keys have no funds and are for local testing only. WalletConnect uses the same account imported into a compatible mobile wallet.\n\n| Scenario | Address | Private key |\n|---|---|---|")
 	for _, w := range m.Wallets {
 		fmt.Fprintf(&guide, "| %s | `%s` | `%s` |\n", w.Scenario, w.Address, w.PrivateKey)
 	}
-	fmt.Fprintln(&guide, "\nwallet_login: existing verified account. wallet_unverified: verification screen. wallet_signup: unused wallet; first signature creates an account, later signatures log in. wallet_link: unused wallet to connect from a password account. metarang_member: membership lookup finds demo_member by code and attaches its wallet.\n\nLogout between scenarios. Use demo_verified for wallet_link. Try wallet_login while logged into demo_verified to test ownership conflict. Test invalid password with WrongPass!2026; five failures lock that email/IP for one minute. Duplicate username/email registration should show validation errors. Verification/reset mail is written to var/mail. Local Metarang fixtures affect only membership lookup; signatures and nonce validation remain real. These fixtures are rejected in production.\n\nRe-running seed-local keeps wallet keys and existing accounts; it does not erase registrations, detach wallets or reset changed passwords.")
+	fmt.Fprintln(&guide, "\nwallet_login: existing verified account. wallet_unverified: verification screen. wallet_signup: unused wallet; first signature creates an account, later signatures log in. wallet_link: unused wallet to connect from a password account. metarang_member: membership lookup finds demo_member by code and attaches its wallet.\n\nLogout between scenarios. Use demo_verified for wallet_link. Try wallet_login while logged into demo_verified to test ownership conflict. Test invalid password with WrongPass!2026; five failures lock that email/IP for one minute. Duplicate email registration should show a validation error. Verification/reset mail is written to var/mail. Local Metarang fixtures affect only membership lookup; signatures and nonce validation remain real. These fixtures are rejected in production.\n\nRe-running seed-local keeps wallet keys and existing accounts; it does not erase registrations, detach wallets or reset changed passwords.")
 	if err := os.WriteFile(filepath.Join(root, "frontend-test-guide.md"), []byte(guide.String()), 0600); err != nil {
 		return err
 	}

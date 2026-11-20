@@ -99,6 +99,13 @@ func (s *Store) ImportLaravelWithOptions(ctx context.Context, source *sql.DB, me
 			u.EmailVerifiedAt = &verified.Time
 		}
 		u.Email = strings.ToLower(u.Email)
+		if strings.TrimSpace(u.Name) == "" {
+			if at := strings.IndexByte(u.Email, '@'); at > 0 {
+				u.Name = u.Email[:at]
+			} else {
+				u.Name = fmt.Sprintf("user_%d", u.ID)
+			}
+		}
 		item.wallet = strings.ToLower(item.wallet)
 		if utf8.RuneCountInString(u.Name) > 255 || len(u.Email) > 255 || len(u.Referral) > 32 || (u.Code != nil && len(*u.Code) > 32) {
 			rows.Close()

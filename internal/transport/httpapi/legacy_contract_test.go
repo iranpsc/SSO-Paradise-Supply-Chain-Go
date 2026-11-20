@@ -67,7 +67,7 @@ func TestLaravelUserAndResourcesOverHTTP(t *testing.T) {
 	db := mysqltest.Open(t)
 	ctx := context.Background()
 	stamp, _ := time.Parse(time.RFC3339, "2026-01-01T23:34:05Z")
-	u, err := db.Create(ctx, domain.User{Name: "Test", Username: "extension_only", Email: "test@example.com", CreatedAt: stamp})
+	u, err := db.Create(ctx, domain.User{Name: "Test", Email: "test@example.com", CreatedAt: stamp})
 	if err != nil {
 		t.Fatal(err)
 	}

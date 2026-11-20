@@ -17,9 +17,6 @@ func (s *Store) Cleanup(ctx context.Context, now time.Time, apply bool) (mysql.C
 		if u.Email != "" {
 			s.del(ctx, emailKey(u.Email))
 		}
-		if u.Username != "" {
-			s.del(ctx, usernameKey(u.Username))
-		}
 	}
 	return result, nil
 }

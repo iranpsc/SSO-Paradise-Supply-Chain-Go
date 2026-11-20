@@ -408,7 +408,7 @@ func TestWeb3NonceGuestOnly(t *testing.T) {
 
 func TestWeb3UnverifiedWalletUserRedirect(t *testing.T) {
 	f := web3Server(t)
-	w := request(f.handler, "POST", "/api/register", `{"username":"unverified","name":"Unverified","email":"unverified@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	w := request(f.handler, "POST", "/api/register", `{"name":"Unverified","email":"unverified@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
 	if w.Code != 201 {
 		t.Fatalf("register %d %s", w.Code, w.Body.String())
 	}
@@ -534,7 +534,7 @@ func TestWeb3CodesIncrement(t *testing.T) {
 
 func TestWeb3PasswordLoginSetsNoFlag(t *testing.T) {
 	f := web3Server(t)
-	request(f.handler, "POST", "/api/register", `{"username":"plain","name":"Plain","email":"plain@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
+	request(f.handler, "POST", "/api/register", `{"name":"Plain","email":"plain@example.com","password":"Secure!2026","password_confirmation":"Secure!2026"}`, "", nil)
 	w := request(f.handler, "POST", "/api/login", `{"email":"plain@example.com","password":"Secure!2026"}`, "", nil)
 	if w.Code != 200 {
 		t.Fatalf("login %d %s", w.Code, w.Body.String())

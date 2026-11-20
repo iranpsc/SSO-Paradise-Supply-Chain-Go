@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/iranpsc/SSO-Paradise-Supply-Chain-Go/internal/domain"
@@ -30,38 +29,102 @@ func Open(path string) (*Store, error) {
 			return nil, err
 		}
 	}
-	if err := migrateUsername(db); err != nil {
+	if err := migrateUserIdentity(db); err != nil {
 		db.Close()
 		return nil, err
 	}
 	return &Store{db}, nil
 }
 
-// Nullable usernames preserve existing accounts; only new registrations require one.
-func migrateUsername(db *sql.DB) error {
-	tx, err := db.Begin()
+// Remove the legacy username column and make name required without losing
+// existing identities or references from related tables.
+func migrateUserIdentity(db *sql.DB) error {
+	rows, err := db.Query("PRAGMA table_info(users)")
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
-	var exists int
-	if err := tx.QueryRow("SELECT COUNT(*) FROM pragma_table_info('users') WHERE name='username'").Scan(&exists); err != nil {
-		return err
-	}
-	if exists == 0 {
-		if _, err := tx.Exec("ALTER TABLE users ADD COLUMN username TEXT COLLATE NOCASE"); err != nil {
+	var hasUsername, nameRequired, hasName bool
+	for rows.Next() {
+		var cid, notNull, primaryKey int
+		var name, dataType string
+		var defaultValue sql.NullString
+		if err := rows.Scan(&cid, &name, &dataType, &notNull, &defaultValue, &primaryKey); err != nil {
+			rows.Close()
 			return err
 		}
+		switch name {
+		case "username":
+			hasUsername = true
+		case "name":
+			hasName = true
+			nameRequired = notNull != 0
+		}
 	}
-	if _, err := tx.Exec("CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique ON users(username COLLATE NOCASE)"); err != nil {
+	if err := rows.Err(); err != nil {
+		rows.Close()
 		return err
 	}
-	return tx.Commit()
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if !hasName {
+		return fmt.Errorf("migration blocked: users.name column is missing")
+	}
+	if !hasUsername && nameRequired {
+		return nil
+	}
+
+	if _, err := db.Exec("PRAGMA foreign_keys=OFF"); err != nil {
+		return err
+	}
+	migrationErr := func() error {
+		tx, err := db.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		nameExpression := `COALESCE(NULLIF(TRIM(name),''),NULLIF(CASE WHEN INSTR(email,'@')>1 THEN SUBSTR(email,1,INSTR(email,'@')-1) END,''),'user_'||id)`
+		if hasUsername {
+			nameExpression = `COALESCE(NULLIF(TRIM(name),''),NULLIF(TRIM(username),''),NULLIF(CASE WHEN INSTR(email,'@')>1 THEN SUBSTR(email,1,INSTR(email,'@')-1) END,''),'user_'||id)`
+		}
+		if _, err := tx.Exec(`UPDATE users SET name=` + nameExpression + ` WHERE name IS NULL OR TRIM(name)=''`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`CREATE TABLE users_identity_new (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+			password_hash TEXT NOT NULL,
+			code TEXT UNIQUE,
+			referral TEXT NOT NULL DEFAULT '',
+			email_verified_at TEXT,
+			created_at TEXT NOT NULL
+		)`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(`INSERT INTO users_identity_new(id,name,email,password_hash,code,referral,email_verified_at,created_at)
+			SELECT id,name,email,password_hash,code,referral,email_verified_at,created_at FROM users`); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("DROP TABLE users"); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("ALTER TABLE users_identity_new RENAME TO users"); err != nil {
+			return err
+		}
+		return tx.Commit()
+	}()
+	_, foreignKeysErr := db.Exec("PRAGMA foreign_keys=ON")
+	if migrationErr != nil {
+		return migrationErr
+	}
+	return foreignKeysErr
 }
 func (s *Store) Close() error  { return s.db.Close() }
 func stamp(t time.Time) string { return t.UTC().Format(time.RFC3339Nano) }
 
-const columns = "id,name,COALESCE(username,''),email,password_hash,code,referral,email_verified_at,created_at"
+const columns = "id,COALESCE(name,''),email,password_hash,code,referral,email_verified_at,created_at"
 
 type scanner interface{ Scan(...any) error }
 
@@ -69,7 +132,7 @@ func scan(row scanner) (domain.User, error) {
 	var u domain.User
 	var verified sql.NullString
 	var created string
-	err := row.Scan(&u.ID, &u.Name, &u.Username, &u.Email, &u.PasswordHash, &u.Code, &u.Referral, &verified, &created)
+	err := row.Scan(&u.ID, &u.Name, &u.Email, &u.PasswordHash, &u.Code, &u.Referral, &verified, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return u, domain.ErrNotFound
 	}
@@ -92,9 +155,6 @@ func scan(row scanner) (domain.User, error) {
 func constraint(err error) error {
 	var coded interface{ Code() int }
 	if errors.As(err, &coded) && (coded.Code() == 2067 || coded.Code() == 1555) {
-		if strings.Contains(err.Error(), "users.username") {
-			return domain.ErrUsernameConflict
-		}
 		return domain.ErrConflict
 	}
 	return err
@@ -105,7 +165,7 @@ func (s *Store) Create(ctx context.Context, u domain.User) (domain.User, error) 
 		return u, err
 	}
 	defer tx.Rollback()
-	r, err := tx.ExecContext(ctx, "INSERT INTO users(name,username,email,password_hash,referral,created_at) VALUES(?,NULLIF(?,''),?,?,?,?)", u.Name, u.Username, u.Email, u.PasswordHash, u.Referral, stamp(u.CreatedAt))
+	r, err := tx.ExecContext(ctx, "INSERT INTO users(name,email,password_hash,referral,created_at) VALUES(?,?,?,?,?)", u.Name, u.Email, u.PasswordHash, u.Referral, stamp(u.CreatedAt))
 	if err != nil {
 		return u, constraint(err)
 	}
@@ -122,10 +182,7 @@ func (s *Store) ByEmail(ctx context.Context, email string) (domain.User, error) 
 	return scan(s.db.QueryRowContext(ctx, "SELECT "+columns+" FROM users WHERE email=?", email))
 }
 func (s *Store) ByLogin(ctx context.Context, identifier string) (domain.User, error) {
-	if strings.Contains(identifier, "@") {
-		return s.ByEmail(ctx, identifier)
-	}
-	return scan(s.db.QueryRowContext(ctx, "SELECT "+columns+" FROM users WHERE username=? COLLATE NOCASE", identifier))
+	return s.ByEmail(ctx, identifier)
 }
 func (s *Store) ByID(ctx context.Context, id int64) (domain.User, error) {
 	return scan(s.db.QueryRowContext(ctx, "SELECT "+columns+" FROM users WHERE id=?", id))

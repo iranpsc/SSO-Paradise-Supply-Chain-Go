@@ -140,7 +140,7 @@ func TestRememberMeAndRegistrationCallback(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	in := application.Registration{Username: "callback_user", Name: "Name", Email: "callback@example.com", Password: password, Confirmation: password, ClientID: &id, RedirectURI: "https://wrong.example/callback", BackURL: "https://metarang.com/app?existing=1"}
+	in := application.Registration{Name: "Name", Email: "callback@example.com", Password: password, Confirmation: password, ClientID: &id, RedirectURI: "https://wrong.example/callback", BackURL: "https://metarang.com/app?existing=1"}
 	if _, err = a.Register(ctx, in); err == nil {
 		t.Fatal("invalid registration callback accepted")
 	}

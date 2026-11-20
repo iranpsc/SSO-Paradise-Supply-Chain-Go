@@ -39,6 +39,9 @@ func legacyDB(t *testing.T) (*sql.DB, string) {
 			t.Fatal(err)
 		}
 	}
+	if _, err := db.Exec(`ALTER TABLE users MODIFY name VARCHAR(255) NULL, ADD COLUMN username VARCHAR(255) NULL UNIQUE`); err != nil {
+		t.Fatal(err)
+	}
 	return db, dsn
 }
 func TestMigrationPreservesLegacyProfilesDatesAndForeignKeys(t *testing.T) {
@@ -46,6 +49,9 @@ func TestMigrationPreservesLegacyProfilesDatesAndForeignKeys(t *testing.T) {
 	ctx := context.Background()
 	created := "2026-01-02T03:04:05.123456+03:30"
 	if _, err := db.Exec(`INSERT INTO users(id,name,email,password_hash,created_at) VALUES(7,'Legacy','legacy@example.com','hash',?)`, created); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users(id,name,username,email,password_hash,created_at) VALUES(8,'','legacy-name','legacy-name@example.com','hash',?)`, created); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`INSERT INTO personal_infos(user_id,first_name,last_name) VALUES(7,'Old','User')`); err != nil {
@@ -73,6 +79,21 @@ func TestMigrationPreservesLegacyProfilesDatesAndForeignKeys(t *testing.T) {
 	if !u.CreatedAt.Equal(expected) {
 		t.Fatalf("timestamp changed: %v", u.CreatedAt)
 	}
+	legacy, err := store.ByID(ctx, 8)
+	if err != nil || legacy.Name != "legacy-name" {
+		t.Fatalf("legacy username not preserved as name: %+v %v", legacy, err)
+	}
+	var usernameColumns int
+	var nameNullability string
+	if err = db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='users' AND column_name='username'`).Scan(&usernameColumns); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.QueryRow(`SELECT is_nullable FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='users' AND column_name='name'`).Scan(&nameNullability); err != nil {
+		t.Fatal(err)
+	}
+	if usernameColumns != 0 || nameNullability != "NO" {
+		t.Fatalf("users identity schema not migrated: username columns=%d name nullability=%s", usernameColumns, nameNullability)
+	}
 	got, err := store.PersonalInfo(ctx, 7)
 	if err != nil || got.Mobile != p.Mobile || got.CompanyRegistrationNumber != "000123" {
 		t.Fatalf("profile lost: %+v %v", got, err)
@@ -99,14 +120,17 @@ func TestMigrationPreservesLegacyProfilesDatesAndForeignKeys(t *testing.T) {
 }
 func TestMigrationRejectsTruncationAndLaravelSource(t *testing.T) {
 	db, _ := legacyDB(t)
-	if _, err := db.Exec(`INSERT INTO users(name,username,email,password_hash,created_at) VALUES('Name',?,'a@example.com','hash','2026-01-01T00:00:00Z')`, strings.Repeat("x", 31)); err != nil {
+	if _, err := db.Exec(`ALTER TABLE users MODIFY code VARCHAR(255) NULL`); err != nil {
 		t.Fatal(err)
 	}
-	if err := mysql.Migrate(context.Background(), db); err == nil || !strings.Contains(err.Error(), "users.username") {
+	if _, err := db.Exec(`INSERT INTO users(name,email,password_hash,code,created_at) VALUES('Name','a@example.com','hash',?,'2026-01-01T00:00:00Z')`, strings.Repeat("x", 33)); err != nil {
+		t.Fatal(err)
+	}
+	if err := mysql.Migrate(context.Background(), db); err == nil || !strings.Contains(err.Error(), "users.code") {
 		t.Fatalf("did not reject narrowing: %v", err)
 	}
-	var username string
-	if err := db.QueryRow(`SELECT username FROM users`).Scan(&username); err != nil || len(username) != 31 {
+	var code string
+	if err := db.QueryRow(`SELECT code FROM users`).Scan(&code); err != nil || len(code) != 33 {
 		t.Fatal("data was truncated")
 	}
 	source := rawDB(t, mysqltest.Database(t))

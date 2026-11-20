@@ -55,21 +55,19 @@ func checkFrontend() error {
 		return response.StatusCode, result, response.Cookies(), err
 	}
 	for _, a := range m.Accounts {
-		for _, identifier := range []string{a.Username, a.Email} {
-			status, _, cookies, err := call("POST", "/api/login", map[string]string{"login": identifier, "password": a.Password}, nil)
-			if err != nil || status != 200 || len(cookies) == 0 {
-				return fmt.Errorf("frontend credential check failed for %s: HTTP %d", identifier, status)
-			}
-			status, body, _, err := call("GET", "/api/account", nil, cookies[0])
-			if err != nil || status != 200 {
-				return fmt.Errorf("account check failed for %s", identifier)
-			}
-			user, ok := body["data"].(map[string]any)
-			if !ok || user["email"] != a.Email {
-				return fmt.Errorf("wrong frontend identity for %s", identifier)
-			}
+		status, _, cookies, err := call("POST", "/api/login", map[string]string{"email": a.Email, "password": a.Password}, nil)
+		if err != nil || status != 200 || len(cookies) == 0 {
+			return fmt.Errorf("frontend credential check failed for %s: HTTP %d", a.Email, status)
 		}
-		fmt.Println("Username/email login OK:", a.Username)
+		status, body, _, err := call("GET", "/api/account", nil, cookies[0])
+		if err != nil || status != 200 {
+			return fmt.Errorf("account check failed for %s", a.Email)
+		}
+		user, ok := body["data"].(map[string]any)
+		if !ok || user["email"] != a.Email {
+			return fmt.Errorf("wrong frontend identity for %s", a.Email)
+		}
+		fmt.Println("Email login OK:", a.Email)
 	}
 	for i, expected := range []string{"/home", "/email/verify"} {
 		w := m.Wallets[i]

@@ -16,7 +16,7 @@ func migrateCredentialTableNames(ctx context.Context, conn *sql.Conn) error {
 		return err
 	}
 	if applied > 0 {
-		return nil
+		return migrateUserIdentity(ctx, conn)
 	}
 	var renames []string
 	for _, pair := range [][2]string{{"legacy_password_resets", "password_reset_tokens"}, {"legacy_remember_tokens", "remember_tokens"}} {
@@ -42,6 +42,8 @@ func migrateCredentialTableNames(ctx context.Context, conn *sql.Conn) error {
 			return err
 		}
 	}
-	_, err := conn.ExecContext(ctx, `INSERT INTO schema_migrations(version,applied_at) VALUES(13,?)`, stamp(time.Now()))
-	return err
+	if _, err := conn.ExecContext(ctx, `INSERT INTO schema_migrations(version,applied_at) VALUES(13,?)`, stamp(time.Now())); err != nil {
+		return err
+	}
+	return migrateUserIdentity(ctx, conn)
 }

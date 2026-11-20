@@ -44,10 +44,6 @@ func newToken() (string, error) {
 func (a *Auth) Register(ctx context.Context, in Registration) (domain.User, error) {
 	in.Name, in.Email = strings.TrimSpace(in.Name), strings.ToLower(strings.TrimSpace(in.Email))
 	v := domain.ValidateIdentity(in.Name, in.Email, 50)
-	in.Username = strings.ToLower(strings.TrimSpace(in.Username))
-	if !domain.ValidUsername(in.Username) {
-		v["username"] = "نام کاربری باید ۳ تا ۳۰ نویسه، با حرف انگلیسی آغاز و فقط شامل حروف انگلیسی، عدد و زیرخط باشد."
-	}
 	for k, msg := range domain.ValidatePassword(in.Password, in.Confirmation) {
 		v[k] = msg
 	}
@@ -95,7 +91,7 @@ func (a *Auth) Register(ctx context.Context, in Registration) (domain.User, erro
 	if err != nil {
 		return domain.User{}, err
 	}
-	user := domain.User{Name: in.Name, Username: in.Username, Email: in.Email, PasswordHash: hash, Referral: in.Referral, CreatedAt: a.Now()}
+	user := domain.User{Name: in.Name, Email: in.Email, PasswordHash: hash, Referral: in.Referral, CreatedAt: a.Now()}
 	if in.BackURL != "" {
 		registrations, ok := a.Accounts.(RegistrationCallbacks)
 		if !ok {

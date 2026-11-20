@@ -1,8 +1,7 @@
 -- Canonical schema after version 2. Apply via cmd/migrate, not directly.
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(255) NULL,
-  username VARCHAR(30) NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NULL UNIQUE,
   password_hash VARCHAR(255) NULL,
   code VARCHAR(32) UNIQUE,

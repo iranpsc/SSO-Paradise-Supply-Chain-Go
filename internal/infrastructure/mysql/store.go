@@ -6,7 +6,6 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -67,7 +66,7 @@ func parseStamp(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid database timestamp %q", value)
 }
 
-const columns = "id,mobile,updated_at,name,COALESCE(username,''),COALESCE(email,''),COALESCE(password_hash,''),code,referral,email_verified_at,created_at,(SELECT address FROM wallets WHERE user_id=users.id)"
+const columns = "id,mobile,updated_at,COALESCE(name,''),COALESCE(email,''),COALESCE(password_hash,''),code,referral,email_verified_at,created_at,(SELECT address FROM wallets WHERE user_id=users.id)"
 
 type scanner interface{ Scan(...any) error }
 
@@ -75,7 +74,7 @@ func scan(row scanner) (domain.User, error) {
 	var u domain.User
 	var verified sql.NullString
 	var created string
-	err := row.Scan(&u.ID, &u.Mobile, &u.UpdatedAt, &u.Name, &u.Username, &u.Email, &u.PasswordHash, &u.Code, &u.Referral, &verified, &created, &u.Wallet)
+	err := row.Scan(&u.ID, &u.Mobile, &u.UpdatedAt, &u.Name, &u.Email, &u.PasswordHash, &u.Code, &u.Referral, &verified, &created, &u.Wallet)
 	if errors.Is(err, sql.ErrNoRows) {
 		return u, domain.ErrNotFound
 	}
@@ -99,9 +98,6 @@ func scan(row scanner) (domain.User, error) {
 func constraint(err error) error {
 	var mysqlErr *mysql.MySQLError
 	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
-		if strings.Contains(err.Error(), "username") {
-			return domain.ErrUsernameConflict
-		}
 		return domain.ErrConflict
 	}
 	return err
@@ -117,7 +113,7 @@ func (s *Store) CreateRegistration(ctx context.Context, u domain.User, backURL s
 		return u, err
 	}
 	defer tx.Rollback()
-	r, err := tx.ExecContext(ctx, "INSERT INTO users(name,username,email,password_hash,referral,created_at,updated_at,mobile) VALUES(?,NULLIF(?,''),?,?,?,?,?,?)", u.Name, u.Username, u.Email, u.PasswordHash, u.Referral, stamp(u.CreatedAt), stamp(u.CreatedAt), u.Mobile)
+	r, err := tx.ExecContext(ctx, "INSERT INTO users(name,email,password_hash,referral,created_at,updated_at,mobile) VALUES(?,?,?,?,?,?,?)", u.Name, u.Email, u.PasswordHash, u.Referral, stamp(u.CreatedAt), stamp(u.CreatedAt), u.Mobile)
 	if err != nil {
 		return u, constraint(err)
 	}
@@ -142,10 +138,7 @@ func (s *Store) ByEmail(ctx context.Context, email string) (domain.User, error) 
 }
 
 func (s *Store) ByLogin(ctx context.Context, identifier string) (domain.User, error) {
-	if strings.Contains(identifier, "@") {
-		return s.ByEmail(ctx, identifier)
-	}
-	return scan(s.db.QueryRowContext(ctx, "SELECT "+columns+" FROM users WHERE username=?", identifier))
+	return s.ByEmail(ctx, identifier)
 }
 
 func (s *Store) ByID(ctx context.Context, id int64) (domain.User, error) {
