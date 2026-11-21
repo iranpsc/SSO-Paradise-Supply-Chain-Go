@@ -1,5 +1,4 @@
-# Go API, commands and mail/cleanup worker
-FROM golang:1.26.10-alpine AS build
+FROM docker.arvancloud.ir/golang:1.26.10-alpine AS build
 RUN apk add --no-cache ca-certificates git
 # A pipe permits fallback on 403/timeouts as well as missing modules.
 # Keep Go checksum verification enabled when using a mirror.
