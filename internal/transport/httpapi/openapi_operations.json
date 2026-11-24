@@ -15,9 +15,6 @@
           "schema": {
             "type": "object",
             "properties": {
-              "username": {
-                "type": "string"
-              },
               "name": {
                 "type": "string"
               },

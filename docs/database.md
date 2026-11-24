@@ -10,7 +10,6 @@ Lengths follow inspected validation and protocol formats. Names/addresses retain
 |---|---|---|
 | users.id | BIGINT AUTO_INCREMENT | Primary key |
 | users.name | VARCHAR(255) | Display name, required |
-| users.username | VARCHAR(30) NULL | Unique, normalized ASCII username; absent on imported accounts |
 | users.email | VARCHAR(255) NULL | Unique normalized email; wallet-only accounts may omit |
 | users.password_hash | VARCHAR(255) NULL | Bcrypt; NULL for wallet-only accounts; reserve space for hash evolution |
 | users.code | VARCHAR(32) NULL | Unique stable member code, e.g. hm2000001 |
