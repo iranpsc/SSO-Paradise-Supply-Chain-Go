@@ -5,7 +5,7 @@ x-go-build: &go-build
 
 services:
   mysql:
-    image: mysql:8.4
+    image: docker.arvancloud.ir/mysql:8.4
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-paradise_go}
@@ -20,7 +20,7 @@ services:
       timeout: 5s
       retries: 20
   redis:
-    image: redis:7-alpine
+    image: docker.arvancloud.ir/redis:7-alpine
     restart: unless-stopped
     env_file: deploy/production.env
     command: [sh, -c, 'exec redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD:?Set REDIS_PASSWORD}"']

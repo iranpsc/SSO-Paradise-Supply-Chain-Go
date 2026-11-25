@@ -15,7 +15,7 @@ jobs:
       MYSQL_PASSWORD: integration-test-only
     services:
       mysql:
-        image: mysql:8.4
+        image: docker.arvancloud.ir/mysql:8.4
         env:
           MYSQL_ROOT_PASSWORD: integration-test-only
           MYSQL_ROOT_HOST: '%'

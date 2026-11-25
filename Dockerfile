@@ -1,5 +1,5 @@
 # Go API, commands and mail/cleanup worker
-FROM golang:1.26.10-alpine AS build
+FROM docker.arvancloud.ir/golang:1.26.10-alpine AS build
 RUN apk add --no-cache ca-certificates git
 # A pipe permits fallback on 403/timeouts as well as missing modules.
 # Keep Go checksum verification enabled when using a mirror.
@@ -12,7 +12,7 @@ COPY cmd ./cmd
 COPY internal ./internal
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
     CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/ ./cmd/api ./cmd/worker ./cmd/manage ./cmd/migrate ./cmd/import
-FROM alpine:3.22
+FROM docker.arvancloud.ir/alpine:3.22
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -u 10001 sso
 COPY --from=build /out/ /usr/local/bin/
 WORKDIR /app
